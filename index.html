@@ -286,8 +286,15 @@
                     setCurrentRound(prev => prev + 1);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 } else {
-                    setScreen('result');
+                    // Masuk ke layar Jeda Emosi
+                    setScreen('loading');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
+                    
+                    // Jeda 6 detik sebelum pindah ke hasil
+                    setTimeout(() => {
+                        setScreen('result');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }, 6000);
                 }
             };
             // Fungsi untuk melompat langsung ke hasil via Kode Fasilitator
@@ -308,6 +315,20 @@
                                     <span className="text-[10px] md:text-[11px] font-bold text-emerald-600 mt-1 uppercase tracking-wider">KUA Kec. Pulau Laut Tengah</span>
                                 </div>
                             </div>
+                        {screen === 'loading' && (
+                            <div className="min-h-[70vh] flex flex-col items-center justify-center fade-in text-center px-4">
+                                <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mb-8 animate-[ping_3s_ease-in-out_infinite]">
+                                    <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg">
+                                        <span className="text-3xl">🌿</span>
+                                    </div>
+                                </div>
+                                <h2 className="text-2xl md:text-3xl font-extrabold text-slate-800 mb-4">Menyiapkan Hasil Refleksi...</h2>
+                                <p className="text-slate-500 max-w-md mx-auto text-lg leading-relaxed">
+                                    Tarik napas dalam-dalam... Hembuskan perlahan... <br/><br/>
+                                    Ingat, apa pun hasilnya nanti bukanlah untuk saling menghakimi, melainkan peta jalan bagi kalian untuk saling mengenali dan bertumbuh bersama.
+                                </p>
+                            </div>
+                        )}
                             {screen === 'test' && (
                                 <div className="text-xs font-bold text-white bg-slate-900 px-4 py-1.5 rounded-full shadow-md">
                                     Tahap {currentRound}/20
@@ -339,6 +360,56 @@
         function Home({ onStart, answeredCount, onReset, userInfo, setUserInfo, onImportReport }) {
             const [importCode, setImportCode] = useState('');
 
+            // --- 1. LOGIKA SMART GREETING (SAPAAN PERSONAL) ---
+            const [greeting, setGreeting] = useState('');
+            
+            useEffect(() => {
+                const hour = new Date().getHours();
+                if (hour >= 5 && hour < 11) setGreeting('Selamat Pagi');
+                else if (hour >= 11 && hour < 15) setGreeting('Selamat Siang');
+                else if (hour >= 15 && hour < 18) setGreeting('Selamat Sore');
+                else setGreeting('Selamat Malam');
+            }, []);
+
+            // --- 2. LOGIKA GENERATOR KUTIPAN & PERINGATAN ---
+            const [quoteIndex, setQuoteIndex] = useState(0);
+            const homeMessages = [
+                // Pesan 1: Peringatan Edukatif (Asli Anda)
+                {
+                    type: 'warning',
+                    icon: '💡',
+                    text: 'Alat ini adalah media refleksi edukatif pendamping bimbingan perkawinan. Instrumen ini bukan tes psikologi klinis, bukan penentu kelayakan menikah, dan tidak menggantikan sesi konseling profesional.'
+                },
+                // Pesan 2: Kutipan Al-Qur'an
+                {
+                    type: 'quote',
+                    icon: '📜',
+                    text: 'Dan di antara tanda-tanda kebesaran-Nya ialah Dia menciptakan pasangan-pasangan untukmu dari jenismu sendiri, agar kamu cenderung dan merasa tenteram kepadanya... (Q.S. Ar-Rum: 21)'
+                },
+                // Pesan 3: Kutipan Buku Fondasi Keluarga Sakinah Kemenag
+                {
+                    type: 'quote',
+                    icon: '🌱',
+                    text: 'Pernikahan bukan sekadar penyatuan, melainkan kerja sama seumur hidup. Suami adalah pakaian bagi istri dan istri adalah pakaian bagi suami yang saling memuliakan.'
+                },
+                // Pesan 4: Kutipan Psikologi Keluarga
+                {
+                    type: 'quote',
+                    icon: '🤝',
+                    text: 'Cinta yang matang tidak menuntut kesempurnaan instan sejak hari pertama. Keindahan pernikahan justru terletak pada kerelaan untuk berproses dan bertumbuh bersama.'
+                }
+            ];
+
+            // Membuat efek berganti otomatis setiap 7 detik
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    setQuoteIndex((prev) => (prev + 1) % homeMessages.length);
+                }, 7000); 
+                return () => clearInterval(interval);
+            }, [homeMessages.length]);
+
+            const currentMessage = homeMessages[quoteIndex];
+
             const handleImport = () => {
                 try {
                     const parsed = JSON.parse(atob(importCode.trim()));
@@ -353,9 +424,12 @@
             };
             return (
                 <div className="fade-in space-y-8 mt-6 text-center">
+                    {/* --- JUDUL DENGAN SMART GREETING --- */}
                     <div className="space-y-4">
-                        <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 leading-tight tracking-tight">
-                            Kenali dirimu,<br/>pahami pasanganmu.
+                        <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 leading-tight tracking-tight transition-all">
+                            {userInfo.name 
+                                ? `${greeting}, ${userInfo.name}!` 
+                                : 'Kenali dirimu,\npahami pasanganmu.'}
                         </h1>
                         <p className="text-slate-600 text-lg md:text-xl max-w-xl mx-auto">
                             Alat bantu refleksi interaktif untuk memetakan kesiapan nilai, emosi, komunikasi, dan visi rumah tangga.
@@ -363,10 +437,21 @@
                     </div>
 
                     <div className="bg-white/60 backdrop-blur-md p-6 md:p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-white text-left max-w-xl mx-auto space-y-5">
-                        <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl mb-4">
-                            <p className="text-xs md:text-sm text-amber-800 text-justify leading-relaxed font-medium">
-                                <strong>Penting:</strong> Alat ini adalah media refleksi edukatif pendamping bimbingan perkawinan. Instrumen ini <strong>bukanlah tes psikologi klinis</strong>, bukan alat penentu sah/tidaknya kelayakan menikah, dan tidak menggantikan sesi konseling profesional.
-                            </p>
+                        
+                        {/* --- KOTAK PESAN BERGANTIAN (PERINGATAN & KUTIPAN) --- */}
+                        <div className={`p-5 rounded-2xl transition-all duration-700 min-h-[110px] flex gap-3 shadow-sm border ${currentMessage.type === 'warning' ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                            <span className="text-2xl mt-0.5">{currentMessage.icon}</span>
+                            <div className="flex-1">
+                                {currentMessage.type === 'warning' ? (
+                                    <p className="text-xs md:text-sm text-amber-800 text-justify leading-relaxed font-medium">
+                                        <strong>Penting:</strong> {currentMessage.text}
+                                    </p>
+                                ) : (
+                                    <p className="text-xs md:text-sm text-emerald-800 text-justify leading-relaxed font-medium italic">
+                                        "{currentMessage.text}"
+                                    </p>
+                                )}
+                            </div>
                         </div>
                         
                         {answeredCount > 0 && answeredCount < 100 && (
@@ -375,6 +460,7 @@
                                 <button onClick={onReset} className="text-xs bg-white text-slate-600 border px-3 py-1.5 rounded-lg hover:bg-slate-100">Hapus & Ulang</button>
                             </div>
                         )}
+
                         <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-4">
                             <p className="text-sm font-bold text-slate-800">Data Diri Calon Pengantin</p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -498,6 +584,42 @@
 
         // --- HALAMAN HASIL & PENAFSIRAN ---
         function Result({ answers, onRestart, userInfo }) {
+            // --- FUNGSI AUTOPLAY MUSIK ---
+            const [isMusicPlaying, setIsMusicPlaying] = useState(true);
+            const audioRef = useRef(null);
+
+            useEffect(() => {
+                // Memanggil file lagu.mp3 dari folder Anda
+                audioRef.current = new Audio('lagu.mp3');
+                audioRef.current.loop = true; // Lagu berulang otomatis tanpa henti
+                audioRef.current.volume = 0.4; // Volume diset 40% agar enak untuk membaca
+                
+                // Perintah memutar lagu
+                audioRef.current.play().catch(error => {
+                    console.log("Autoplay ditahan sistem", error);
+                    setIsMusicPlaying(false);
+                });
+
+                // Mematikan lagu jika pengguna menekan tombol "Akhiri Sesi"
+                return () => {
+                    if (audioRef.current) {
+                        audioRef.current.pause();
+                        audioRef.current = null;
+                    }
+                };
+            }, []);
+
+            // Fungsi untuk tombol on/off musik
+            const toggleMusic = () => {
+                if (audioRef.current) {
+                    if (isMusicPlaying) {
+                        audioRef.current.pause();
+                    } else {
+                        audioRef.current.play();
+                    }
+                    setIsMusicPlaying(!isMusicPlaying);
+                }
+            };
             // 1. HITUNG SKOR TERLEBIH DAHULU (Agar bisa dipakai oleh fungsi di bawahnya)
             const dimScores = useMemo(() => {
                 const sums = {}; const counts = {};
@@ -964,7 +1086,169 @@
                 }
             };
             const profile = getProfile();
+            // --- LOGIKA REKOMENDASI E-BOOK BERDASARKAN NILAI TERENDAH ---
+            const getEbookRecommendation = () => {
+                // Mengurutkan dari nilai paling rendah ke tinggi
+                const sortedDims = Object.entries(dimScores).sort((a,b) => a[1] - b[1]); 
+                const lowestDim = sortedDims[0][0]; 
+                
+                let title = ""; let desc = ""; let link = "";
 
+                if (['Keuangan'].includes(lowestDim)) {
+                    title = "Pengelolaan Keuangan Keluarga";
+                    desc = "Panduan praktis menyatukan dua isi dompet, merancang masa depan, dan menghindari konflik finansial.";
+                    link = "https://drive.google.com/file/d/1mISm_Q9EbsT7Y86Hu62yXWsFRKTai5Ji/view?usp=drive_link"; // NANTI GANTI DENGAN LINK ASLI ANDA
+                } else if (['Komunikasi', 'Konflik', 'Emosi'].includes(lowestDim)) {
+                    title = "Mengelola Konflik dalam Rumah Tangga";
+                    desc = "Teknik meredam amarah, menghindari silent treatment, dan menyelesaikan perdebatan dengan kepala dingin.";
+                    link = "https://drive.google.com/file/d/1W5mpoEWkErX2OmkI8o7335j4N8CjCQRh/view?usp=drive_link"; // NANTI GANTI DENGAN LINK ASLI ANDA
+                } else if (['Karier', 'TempatTinggal', 'Kesehatan'].includes(lowestDim)) {
+                    title = "Dinamika Rumah Tangga";
+                    desc = "Tips berbagi peran domestik, menjaga privasi, dan beradaptasi dengan rutinitas kehidupan harian yang melelahkan.";
+                    link = "https://drive.google.com/file/d/1mO2j3c7cxb9Xt6PYemUhGVgoqoG90n_f/view?usp=drive_link"; // NANTI GANTI DENGAN LINK ASLI ANDA
+                } else if (['Kedekatan', 'Kepercayaan', 'Anak', 'Keluarga'].includes(lowestDim)) {
+                    title = "Keluarga Sakinah";
+                    desc = "Membangun kehangatan, menjaga batasan dengan mertua, dan menyatukan visi pengasuhan generasi penerus.";
+                    link = "https://drive.google.com/file/d/1brhtucxTW4SUDDLJysfWxjThkKPCz0s5/view?usp=drive_link"; // NANTI GANTI DENGAN LINK ASLI ANDA
+                } else {
+                    title = "Makna Pernikahan";
+                    desc = "Menggali kembali fondasi, nilai spiritual, dan tujuan utama mengapa Anda berdua memutuskan untuk hidup bersama.";
+                    link = "https://drive.google.com/file/d/1vfXEkFYVw2KBJBJFWRTRj0GYO0bSf8JM/view?usp=drive_link"; // NANTI GANTI DENGAN LINK ASLI ANDA
+                }
+                return { title, desc, link };
+            };
+            const recommendedEbook = getEbookRecommendation();
+
+            // --- LOGIKA ICE BREAKER CERDAS (FOKUS PADA KELEMAHAN) ---
+            // 1. Mencari dimensi dengan nilai terendah milik peserta
+            const lowestDimKey = Object.entries(dimScores).sort((a,b) => a[1] - b[1])[0][0];
+            
+            // 2. Database 70 Pertanyaan Kencan (5 per 14 Dimensi)
+            const iceBreakerDB = {
+                'Kesiapan': [
+                    "Apa kekhawatiran terbesarmu saat bersiap melepas masa lajang?",
+                    "Hal apa yang paling membuatmu merasa 'aku sudah siap menikah' dengan diriku?",
+                    "Kebiasaan lajang apa yang kira-kira paling sulit kamu kurangi setelah kita menikah?",
+                    "Bagaimana caramu mengatasi rasa ragu ketika harus mengambil keputusan besar dalam hidup?",
+                    "Menurutmu, apa tantangan paling berat yang akan kita hadapi di satu tahun pertama pernikahan?"
+                ],
+                'Nilai': [
+                    "Apa definisi 'sukses' dan 'bahagia' bagi keluarga kita nantinya?",
+                    "Prinsip hidup apa dari orang tuamu yang ingin kamu terapkan juga di keluarga kita?",
+                    "Jika impian karier pribadimu bertabrakan dengan kebutuhan keluarga, bagaimana kamu menyikapinya?",
+                    "Menurutmu, apa prioritas utama kita dalam 5 tahun pertama pernikahan?",
+                    "Nilai moral atau prinsip apa yang paling pantang untuk dilanggar dalam rumah tangga kita?"
+                ],
+                'Agama': [
+                    "Bagaimana caramu mengingatkan aku soal ibadah tanpa membuatku merasa dihakimi?",
+                    "Menurutmu, seberapa penting peran ilmu agama dalam merawat keharmonisan rumah tangga kita?",
+                    "Jika kita punya anak, nilai agama atau moral apa yang pertama kali ingin kamu tanamkan?",
+                    "Bagaimana kita akan mengambil keputusan jika dihadapkan pada masalah yang membingungkan secara moral/agama?",
+                    "Apa impian spiritual tertinggimu untuk keluarga kita kelak?"
+                ],
+                'Keuangan': [
+                    "Jika kita mengalami krisis keuangan, pengeluaran apa yang pertama kali harus kita potong?",
+                    "Bagaimana sebaiknya kita mengatur dan membagi porsi tabungan, cicilan, dan uang belanja bulanan?",
+                    "Apa ketakutan terbesarmu tentang masalah uang dalam sebuah pernikahan?",
+                    "Bagaimana kita akan menyikapi jika salah satu dari kita ternyata memiliki utang di masa lalu?",
+                    "Berapa batas maksimal nominal pengeluaran yang harus selalu kita diskusikan bersama sebelum membelinya?"
+                ],
+                'Karier': [
+                    "Jika salah satu dari kita harus pindah kota karena pekerjaan, bagaimana kita akan membicarakannya?",
+                    "Menurutmu, siapa yang harusnya paling bertanggung jawab atas kebersihan harian rumah kita?",
+                    "Jika kelak penghasilan istri lebih besar, bagaimana perasaan dan sikap kita menghadapinya?",
+                    "Apa bentuk dukungan nyata yang kamu harapkan dariku saat kamu sedang stres karena pekerjaan?",
+                    "Bagaimana cara kita menyeimbangkan waktu antara mengejar karier dan menghabiskan waktu bersama?"
+                ],
+                'TempatTinggal': [
+                    "Jika kita belum punya rumah sendiri, apakah kamu lebih memilih menyewa/ngontrak atau tinggal dengan orang tua?",
+                    "Seberapa rapi dan bersih standar kondisi rumah yang kamu harapkan setiap harinya?",
+                    "Menurutmu, apa aturan dasar di rumah kita untuk tamu atau kerabat yang ingin menginap?",
+                    "Apa tugas rumah tangga (seperti cuci piring, menyapu) yang paling kamu benci dan butuh bantuanku?",
+                    "Menurutmu, barang apa yang paling penting untuk segera kita beli dan lengkapi di tempat tinggal awal kita?"
+                ],
+                'Anak': [
+                    "Kapan waktu yang paling tepat menurutmu untuk mulai merencanakan kehadiran anak?",
+                    "Apa hal dari masa kecilmu yang sama sekali TIDAK ingin kamu ulangi pada anak kita kelak?",
+                    "Jika kita kesulitan mendapatkan keturunan secara medis, bagaimana kita akan saling mendukung?",
+                    "Bagaimana kita akan bereaksi jika mertua/orang tua terlalu sering mencampuri cara kita mendidik anak?",
+                    "Menurutmu, sejauh mana hukuman teguran/fisik boleh atau tidak boleh diberikan kepada anak?"
+                ],
+                'Komunikasi': [
+                    "Jika kamu sedang sedih atau kesal, apa reaksi dariku yang paling bisa membuatmu merasa nyaman?",
+                    "Menurutmu, kapan waktu dan cara terbaik untuk membicarakan hal-hal yang membuat hati tidak nyaman?",
+                    "Apa kebiasaan kecilku yang kadang membuatmu diam-diam merasa kesal atau geregetan?",
+                    "Apakah kamu merasa cukup aman dan tidak dihakimi untuk menceritakan rahasia/ketakutanmu kepadaku?",
+                    "Bagaimana caramu memberitahuku jika kamu sedang sangat lelah dan butuh waktu untuk menyendiri (me-time)?"
+                ],
+                'Konflik': [
+                    "Jika kita sedang bertengkar hebat, apa satu hal yang paling kamu ingin aku lakukan untuk menenangkan suasana?",
+                    "Bagaimana pandanganmu tentang menunda perdebatan untuk tidur, atau haruskah selesai malam itu juga?",
+                    "Menurutmu, kata-kata atau tindakan seperti apa yang paling 'haram' diucapkan saat kita saling marah?",
+                    "Siapa yang biasanya lebih dulu menurunkan gengsi meminta maaf setelah kita berselisih?",
+                    "Jika konflik kita berlarut-larut, apakah kamu bersedia untuk difasilitasi oleh konselor KUA atau pihak ketiga?"
+                ],
+                'Emosi': [
+                    "Saat kamu sedang merasa rapuh atau gagal, dukungan seperti apa yang paling kamu harapkan dariku?",
+                    "Apa hal yang paling mudah memicu rasa stresmu atau membuatmu kehilangan kendali emosi?",
+                    "Bagaimana caramu memproses kritik dariku agar tidak merasa sedang diserang harga dirinya?",
+                    "Menurutmu, apakah wajar bagi seorang laki-laki (suami) untuk menangis dan menunjukkan sisi rapuhnya?",
+                    "Bagaimana kita memastikan bahwa lelah di luar rumah tidak terbawa menjadi sasaran amarah kepada pasangan?"
+                ],
+                'Kedekatan': [
+                    "Apa bentuk 'bahasa cinta' (love language) dariku yang paling membuatmu merasa disayangi?",
+                    "Bagaimana cara kita menjaga kemesraan agar tidak hambar ketika kita sudah sibuk dengan rutinitas bertahun-tahun?",
+                    "Jika ada kebutuhan keintiman yang belum terpenuhi, bagaimana kamu akan menyampaikannya kepadaku tanpa rasa canggung?",
+                    "Menurutmu, seberapa penting menyempatkan 'kencan' berdua secara rutin meskipun sudah lama menikah?",
+                    "Pujian atau apresiasi apa dariku yang paling berarti dan selalu kamu ingat sampai detik ini?"
+                ],
+                'Kepercayaan': [
+                    "Apa batasan interaksi kita dengan rekan kerja lawan jenis yang harus disepakati bersama?",
+                    "Bagaimana pendapatmu tentang saling mengecek ponsel dan membagikan semua kata sandi (password)?",
+                    "Menurutmu, masalah rumah tangga seperti apa yang sama sekali dilarang untuk diceritakan ke media sosial?",
+                    "Jika salah satu dari kita pernah berbohong, bagaimana cara terbaik untuk merajut kembali rasa percaya yang sobek?",
+                    "Apa definisi 'ruang privasi' bagi masing-masing dari kita setelah resmi menjadi suami istri?"
+                ],
+                'Keluarga': [
+                    "Jika aku berbeda pendapat secara tajam dengan ibu/bapakmu, bagaimana caramu memposisikan diri untuk menengahi?",
+                    "Seberapa sering idealnya kita mengunjungi keluarga besar masing-masing setiap bulannya?",
+                    "Jika saudara kandungmu membutuhkan bantuan finansial yang besar, bagaimana kita harus memutuskannya?",
+                    "Menurutmu, tradisi atau kebiasaan keluargaku apa yang rasanya paling butuh adaptasi darimu?",
+                    "Bagaimana kita memastikan bahwa keputusan keluarga inti kita tidak disetir oleh campur tangan mertua?"
+                ],
+                'Kesehatan': [
+                    "Jika salah satu dari kita jatuh sakit parah dan butuh waktu lama, apa ketakutan terbesarmu dan bagaimana kita menghadapinya?",
+                    "Bagaimana kita saling memotivasi untuk menjaga pola makan dan kebugaran fisik setelah menikah nanti?",
+                    "Apakah kita berdua sudah membagikan riwayat kesehatan secara transparan tanpa ada yang ditutupi sedikit pun?",
+                    "Jika kondisi ekonomi kita memburuk drastis, bagaimana cara kita saling melindungi kesehatan mental masing-masing?",
+                    "Persiapan jaminan hari tua seperti apa yang harus mulai kita pikirkan dari sekarang untuk ketahanan keluarga?"
+                ]
+            };
+
+            // 3. Fungsi Pemilih Pertanyaan (Memprioritaskan Kelemahan)
+            const getRandomQuestion = (isInitial = false) => {
+                let selectedDim = lowestDimKey;
+                
+                // Jika tombol Ganti ditekan (bukan pertama kali muat), 
+                // ada 40% peluang mengambil pertanyaan dari dimensi lain secara acak 
+                // agar obrolan tidak monoton/membuat stres.
+                if (!isInitial && Math.random() > 0.6) {
+                    const allDims = Object.keys(iceBreakerDB);
+                    selectedDim = allDims[Math.floor(Math.random() * allDims.length)];
+                }
+                
+                const questions = iceBreakerDB[selectedDim];
+                const finalQuestion = questions[Math.floor(Math.random() * questions.length)];
+                
+                return { dim: dimensiNames[selectedDim], text: finalQuestion };
+            };
+
+            // 4. Inisialisasi State dengan pertanyaan yang menarget kelemahan utama
+            const [currentIceBreaker, setCurrentIceBreaker] = useState(() => getRandomQuestion(true));
+            
+            const handleRandomIceBreaker = () => {
+                setCurrentIceBreaker(getRandomQuestion(false));
+            };
             return (
                 <div className="fade-in space-y-12">
                     <div className="hidden print:block text-center mb-8 border-b pb-4">
@@ -1187,7 +1471,36 @@
                             </div>
                         </div>
                     </section>
+                    {/* --- FITUR E-BOOK & BAHAN OBROLAN --- */}
+                    <div className="grid md:grid-cols-2 gap-6 print-break no-print">
+                        {/* 1. Rekomendasi E-book */}
+                        <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-3xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 text-7xl opacity-10 translate-x-4 -translate-y-4">📖</div>
+                            <div className="relative z-10">
+                                <span className="text-xs font-extrabold tracking-widest uppercase text-emerald-600 bg-emerald-100 px-3 py-1 rounded-full">Rekomendasi Modul</span>
+                                <h3 className="text-xl font-bold text-slate-800 mt-4 mb-2">"{recommendedEbook.title}"</h3>
+                                <p className="text-sm text-slate-600 mb-6 leading-relaxed text-justify">{recommendedEbook.desc}</p>
+                                <a href={recommendedEbook.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md">
+                                    <span>📥</span> Baca E-Book Gratis
+                                </a>
+                            </div>
+                        </div>
 
+                        {/* 2. Bahan Obrolan Prioritas (Kelemahan) */}
+                        <div className="bg-purple-50 border border-purple-200 p-6 rounded-3xl relative">
+                            <span className="text-xs font-extrabold tracking-widest uppercase text-purple-600 bg-purple-100 px-3 py-1 rounded-full">Bahan Obrolan Kencan</span>
+                            <p className="text-sm text-slate-500 mt-4 mb-2">Diskusikan pertanyaan mendalam ini bersama pasangan Anda malam ini:</p>
+                            
+                            <div className="bg-white border border-purple-100 p-4 rounded-2xl shadow-sm mb-4 min-h-[110px] flex flex-col justify-center relative">
+                                <span className="absolute top-0 right-0 bg-slate-100 text-slate-400 text-[10px] font-bold px-2 py-1 rounded-bl-xl rounded-tr-xl border-b border-l border-slate-100 uppercase tracking-widest">Topik: {currentIceBreaker.dim}</span>
+                                <p className="text-slate-800 font-bold text-center w-full leading-relaxed mt-2 text-sm md:text-base">"{currentIceBreaker.text}"</p>
+                            </div>
+                            
+                            <button onClick={handleRandomIceBreaker} className="w-full flex justify-center items-center gap-2 border-2 border-purple-300 hover:border-purple-500 text-purple-700 font-bold py-3 px-6 rounded-xl transition-all bg-white hover:bg-purple-100">
+                                <span>🎲</span> Ganti Pertanyaan Lain
+                            </button>
+                        </div>
+                    </div>
                     {/* Footer Actions */}
                     <div className="pt-6 no-print space-y-4">
                         <div className="bg-slate-50 border border-slate-200 p-6 rounded-3xl text-center max-w-2xl mx-auto">
@@ -1218,6 +1531,16 @@
                         <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase">KUA Kecamatan Pulau Laut Tengah</p>
                         <p className="text-[10px] text-slate-400 mt-2 max-w-sm mx-auto">Dokumen ini bersifat rahasia dan sepenuhnya ditujukan untuk keperluan refleksi internal calon pengantin.</p>
                     </div>
+
+                    {/* --- TOMBOL MUSIK MENGAMBANG --- */}
+                    <button 
+                        onClick={toggleMusic} 
+                        className="fixed bottom-6 right-6 z-50 bg-slate-900/80 backdrop-blur text-white p-4 rounded-full shadow-2xl hover:bg-slate-800 transition-all border border-slate-700 no-print flex items-center justify-center text-xl"
+                        title={isMusicPlaying ? "Matikan Musik" : "Putar Musik"}
+                    >
+                        {isMusicPlaying ? '🔊' : '🔇'}
+                    </button>
+
                 </div>
             );
         }
