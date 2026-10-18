@@ -514,27 +514,22 @@
             ];
             // --- FUNGSI PENGIRIMAN HASIL KE KUA ---
             const generateReportText = () => {
-                // Mencari dimensi terkuat dan terlemah
                 const sortedDims = Object.entries(dimScores).sort((a,b) => b[1] - a[1]);
                 const topDim = dimensiNames[sortedDims[0][0]];
                 const lowestDim = dimensiNames[sortedDims[sortedDims.length - 1][0]];
-                // Menentukan narasi profil ringkas untuk fasilitator
-                let profileSummary = "";
-                if (dimScores['Keuangan'] >= 3.8 && dimScores['MasaDepan'] >= 3.8) {
-                    profileSummary = `${userName} (Usia ${userAge}) menunjukkan profil sebagai individu yang rasional, terstruktur, dan sangat memikirkan kestabilan masa depan serta tanggung jawab material. Ia cenderung menyukai kejelasan dan perencanaan yang matang dalam membangun rumah tangga.`;
-                } else if (dimScores['Kedekatan'] >= 3.8 && dimScores['Keluarga'] >= 3.8) {
-                    profileSummary = `${userName} (Usia ${userAge}) menampilkan profil sebagai pribadi yang hangat, menempatkan kedekatan emosional, empati, dan keharmonisan hubungan sebagai prioritas utama dalam memandang sebuah ikatan perkawinan.`;
-                } else if (dimScores['Nilai'] >= 3.8 && dimScores['Konflik'] >= 3.5) {
-                    profileSummary = `${userName} (Usia ${userAge}) memiliki karakter yang komunikatif, menjunjung tinggi konsensus bersama, serta berorientasi pada penyelesaian masalah secara adil dan terbuka saat menghadapi perbedaan pandangan.`;
-                } else {
-                    profileSummary = `${userName} (Usia ${userAge}) menunjukkan karakter yang adaptif dan terbuka untuk terus belajar. Ia siap menjalani proses penyesuaian tahap demi tahap dalam menyelaraskan kehidupan berumah tangga.`;
-                }
+
+                // Menarik data langsung dari 20 Profil Karakter
+                const profileSummary = `Peserta bernama ${userName} (Usia ${userAge} tahun) memiliki kecenderungan profil *"${profile.title}"*. \n${profile.desc}\n\n*Catatan Fasilitator:*\nKekuatan utamanya adalah ${profile.strengths.join(' ')} Namun, perlu diwaspadai tantangannya, yaitu ${profile.challenges.join(' ')}`;
+
                 let text = `*HASIL REFLEKSI BIMBINGAN PERKAWINAN KUA*\n\n`;
                 text += `*Data Calon Pengantin:*\n`;
                 text += `• Nama: ${userName}\n`;
                 text += `• Usia: ${userAge} Tahun\n\n`;
+                
                 text += `*Gambaran Karakter (Ringkasan Fasilitator):*\n`;
                 text += `${profileSummary}\n\n`;
+
+                text += `*Ringkasan Pemetaan:*\n`;
                 text += `• Profil Karakter: ${profile.title}\n`;
                 text += `• Kekuatan Utama: ${topDim}\n`;
                 text += `• Area Evaluasi: ${lowestDim}\n\n`;
@@ -689,18 +684,223 @@
 
                 return { gap, status, interp, advice, color: gap <= 0.6 ? 'text-emerald-600' : gap <= 1.4 ? 'text-blue-600' : 'text-amber-600' };
             };
+            // --- FUNGSI 20 KARAKTERISTIK PENGANTIN (KUA) ---
             const getProfile = () => {
-                const finance = dimScores['Keuangan']; const emotion = dimScores['Emosi'];
-                const value = dimScores['Nilai']; const intimacy = dimScores['Kedekatan'];
-                
-                if (finance >= 3.8 && dimScores['MasaDepan'] >= 3.8) {
-                    return { title: 'Perencana yang Terstruktur', desc: 'Anda memiliki kecenderungan memikirkan kestabilan, manajemen finansial, dan antisipasi masa depan. Anda menyukai persiapan yang jelas dan menenangkan.', strengths: ['Pemikiran rasional jangka panjang.', 'Fokus pada keamanan keluarga.', 'Berkomitmen pada kesepakatan faktual.'], challenges: ['Berpotensi merasa cemas jika rencana keluar jalur.', 'Terkadang logika menutupi kebutuhan validasi emosional.'], growth: 'Sediakan ruang kompromi yang fleksibel. Pahami bahwa dukungan emosional terkadang lebih dibutuhkan daripada solusi analitis semata.' };
-                } else if (intimacy >= 3.8 && dimScores['Keluarga'] >= 3.8) {
-                    return { title: 'Pembangun Kehangatan', desc: 'Fokus Anda berpusat pada dukungan emosional, komunikasi afektif, dan keharmonisan. Anda melihat pernikahan sebagai ruang aman untuk bertumbuh bersama.', strengths: ['Memiliki empati yang tulus.', 'Memprioritaskan kedekatan dan koneksi batin.', 'Responsif terhadap kebutuhan emosional pasangan.'], challenges: ['Kecenderungan menghindari perdebatan sehat demi kedamaian.', 'Rentan mengalami kelelahan batin jika merasa berjuang sendiri.'], growth: 'Tumbuhkan keberanian untuk menyatakan ketidaksetujuan secara santun. Berbeda pendapat bukanlah tanda lunturnya keharmonisan.' };
-                } else if (value >= 3.8 && dimScores['Konflik'] >= 3.5) {
-                    return { title: 'Pencari Keselarasan', desc: 'Anda menjunjung tinggi komunikasi penyelesaian masalah dan prinsip moral. Bagi Anda, rumah tangga yang sehat adalah ruang dialog yang adil.', strengths: ['Kemampuan mencari jalan tengah.', 'Terbuka dalam membicarakan isu sensitif.', 'Sangat menghargai konsensus bersama.'], challenges: ['Cenderung menganalisis hubungan terlalu dalam.', 'Berpotensi merasa terbebani jika pasangan bersikap tertutup.'], growth: 'Belajarlah membedakan antara perbedaan selera harian dengan perbedaan prinsipil. Tidak semua hal harus diselaraskan secara sempurna.' };
-                } else {
-                    return { title: 'Individu Adaptif', desc: 'Anda menampilkan keterbukaan untuk menyesuaikan diri seiring berjalannya waktu. Anda tidak kaku, namun mungkin masih dalam tahap mematangkan ekspektasi pasti.', strengths: ['Fleksibilitas dalam menerima perubahan.', 'Tidak memaksakan kesempurnaan instan.', 'Siap belajar dari proses kehidupan.'], challenges: ['Beberapa batasan privasi dan rencana krusial belum terdefinisi.', 'Berisiko terbawa arus tanpa tujuan terarah.'], growth: 'Mulai formulasikan rencana yang lebih terukur. Ubah sikap adaptif menjadi kesepakatan konkret (misal: membahas domisili dan pengelolaan keuangan).' };
+                // Memuat semua nilai skor agar mudah dibaca
+                const d_Agama = dimScores['Agama'] || 3;
+                const d_Anak = dimScores['Anak'] || 3;
+                const d_Emosi = dimScores['Emosi'] || 3;
+                const d_Karier = dimScores['Karier'] || 3;
+                const d_Kedekatan = dimScores['Kedekatan'] || 3;
+                const d_Keluarga = dimScores['Keluarga'] || 3;
+                const d_Kepercayaan = dimScores['Kepercayaan'] || 3;
+                const d_Kesehatan = dimScores['Kesehatan'] || 3;
+                const d_Kesiapan = dimScores['Kesiapan'] || 3;
+                const d_Keuangan = dimScores['Keuangan'] || 3;
+                const d_Komunikasi = dimScores['Komunikasi'] || 3;
+                const d_Konflik = dimScores['Konflik'] || 3;
+                const d_Nilai = dimScores['Nilai'] || 3;
+                const d_TempatTinggal = dimScores['TempatTinggal'] || 3;
+
+                // 19. Tipe Penuh Pertimbangan (Overthinking)
+                if (d_Keuangan >= 3.8 && d_Anak >= 3.8 && d_Kesiapan < 3.5) {
+                    return {
+                        title: 'Tipe Penuh Pertimbangan',
+                        desc: 'Anda memiliki standar yang tinggi untuk pernikahan ideal dan sangat berhati-hati melangkah. Akibatnya, Anda terkadang merasa cemas apakah realitas nanti bisa memenuhi standar sempurna yang Anda buat di kepala.',
+                        strengths: ['Sangat teliti sebelum bertindak.', 'Memiliki bayangan kesejahteraan keluarga yang jelas.', 'Berkomitmen kuat memberikan yang terbaik.'],
+                        challenges: ['Rentan mengalami overthinking.', 'Terkadang menuntut kesempurnaan instan dari pasangan.'],
+                        growth: 'Beri kelonggaran pada diri Anda. Tidak ada pernikahan yang 100% sempurna sejak hari pertama. Keindahan pernikahan justru ada pada proses belajar bersama.'
+                    };
+                } 
+                // 7. Si Pembawa Damai (Penghindar Konflik)
+                else if (d_Kedekatan >= 3.5 && d_Komunikasi < 3.5 && d_Konflik < 3.5) {
+                    return {
+                        title: 'Si Pembawa Damai',
+                        desc: 'Anda sangat menyukai keharmonisan dan sangat menghindari perdebatan. Anda sering kali rela mengalah atau memilih diam (menahan perasaan) demi menjaga suasana tetap tenang.',
+                        strengths: ['Sangat sabar dan tidak mudah terpancing emosi.', 'Menciptakan suasana rumah yang tenang dan hangat.', 'Mudah memaafkan kekurangan pasangan.'],
+                        challenges: ['Berisiko menumpuk rasa kecewa sendirian.', 'Sering menunda penyelesaian akar masalah.'],
+                        growth: 'Beranikan diri untuk bersikap asertif. Berbeda pendapat bukanlah tanda lunturnya keharmonisan. Sampaikan rasa tidak nyaman dengan bahasa yang tetap lembut.'
+                    };
+                } 
+                // 12. Pembaru Tradisi (Memutus Siklus Lama)
+                else if (d_Kesiapan >= 3.8 && d_Emosi >= 3.8 && d_Keluarga < 3.5) {
+                    return {
+                        title: 'Pembaru Tradisi',
+                        desc: 'Anda memiliki kemandirian emosional yang tinggi dan bertekad membangun budaya keluarga baru yang mungkin jauh lebih sehat dan berbeda dari pola asuh orang tua Anda di masa lalu.',
+                        strengths: ['Memiliki visi yang progresif untuk keluarga inti.', 'Berani memutus siklus tradisi yang tidak sehat.', 'Sangat mandiri dalam mengambil keputusan.'],
+                        challenges: ['Bisa terlihat menjaga jarak dari keluarga besar.', 'Terkadang bersikap kaku pada batasan (boundaries).'],
+                        growth: 'Pertahankan kemandirian Anda, namun usahakan tetap menjaga komunikasi yang diplomatis dan penuh hormat dengan keluarga besar maupun mertua.'
+                    };
+                } 
+                // 3. Tipe Praktis & Rasional (Sangat Logis)
+                else if (d_Keuangan >= 3.8 && d_Konflik >= 3.5 && d_Kedekatan < 3.5) {
+                    return {
+                        title: 'Tipe Praktis & Rasional',
+                        desc: 'Anda memandang pernikahan layaknya kerja sama tim yang profesional. Anda pandai mencari solusi faktual atas sebuah masalah, namun terkadang lupa menggunakan sentuhan emosional.',
+                        strengths: ['Sangat bisa diandalkan saat menghadapi krisis nyata.', 'Memiliki manajemen rumah tangga yang efektif.', 'Berpikir panjang sebelum mengambil risiko finansial.'],
+                        challenges: ['Kurang peka terhadap validasi perasaan pasangan.', 'Terasa kaku dan kurang ekspresif soal kasih sayang.'],
+                        growth: 'Ingatlah bahwa saat pasangan mengeluh, mereka tidak selalu mencari solusi logika. Kadang mereka hanya ingin didengarkan, divalidasi, dan dipeluk.'
+                    };
+                } 
+                // 9. Tipe Religius & Berprinsip
+                else if (d_Agama >= 3.8 && d_Nilai >= 3.5) {
+                    return {
+                        title: 'Tipe Religius & Berprinsip',
+                        desc: 'Anda menjadikan nilai-nilai keagamaan sebagai kompas utama. Tujuan utama pernikahan bagi Anda adalah ibadah dan membangun keturunan yang berakar kuat pada ajaran agama.',
+                        strengths: ['Memiliki moralitas dan integritas yang teguh.', 'Menjadikan keyakinan sebagai sumber ketenangan batin.', 'Mampu mengesampingkan ego pribadi demi prinsip yang lebih tinggi.'],
+                        challenges: ['Bisa bersikap menghakimi jika pasangan berproses lebih lambat.', 'Terkadang kaku terhadap perubahan zaman.'],
+                        growth: 'Bimbing pasangan dengan penuh kelembutan dan kesabaran. Jadikan nilai agama sebagai sumber kasih sayang, bukan sekadar daftar aturan yang mengekang.'
+                    };
+                } 
+                // 10. Fokus pada Anak (Pendidik)
+                else if (d_Anak >= 3.8 && d_Nilai >= 3.5) {
+                    return {
+                        title: 'Fokus pada Anak (Pendidik)',
+                        desc: 'Fokus pandangan Anda jauh ke depan, tepatnya pada warisan karakter untuk generasi penerus. Anda sudah memiliki visi pola asuh yang terencana dengan baik.',
+                        strengths: ['Sangat protektif dan peduli pada perkembangan anak.', 'Mementingkan pendidikan dan nilai moral keluarga.', 'Siap berkorban demi masa depan generasi penerus.'],
+                        challenges: ['Rentan mengabaikan kualitas hubungan berdua (hanya fokus pada anak).', 'Bisa berselisih keras jika pasangan punya gaya asuh berbeda.'],
+                        growth: 'Pastikan Anda tidak melupakan status sebagai suami/istri. Luangkan waktu khusus hanya untuk berdua agar kemesraan tidak terkikis rutinitas mengasuh anak.'
+                    };
+                } 
+                // 17. Si Kepala Dingin
+                else if (d_Konflik >= 3.8 && d_Emosi >= 3.8) {
+                    return {
+                        title: 'Si Kepala Dingin',
+                        desc: 'Anda memiliki kecerdasan emosional yang luar biasa saat di bawah tekanan. Anda pandai menurunkan tensi saat pasangan meledak dan selalu berhasil menetralkan suasana panas.',
+                        strengths: ['Tidak mudah terpancing amarah.', 'Sangat objektif dan adil saat bertengkar.', 'Mampu memberikan rasa tenang pada pasangan yang sedang panik.'],
+                        challenges: ['Bisa dianggap terlalu datar atau tidak peduli oleh pasangan.', 'Terkadang lupa merayakan emosi positif (terlalu serius).'],
+                        growth: 'Kelola konflik dengan baik, tapi jangan lupa untuk bersikap lebih santai, ekspresif, dan mau sesekali bertingkah konyol bersama pasangan.'
+                    };
+                } 
+                // 2. Pengatur Rumah Tangga
+                else if (d_TempatTinggal >= 3.8 && d_Karier >= 3.5) {
+                    return {
+                        title: 'Pengatur Rumah Tangga',
+                        desc: 'Anda sangat memikirkan keteraturan fisik rumah tangga. Anda menghargai tindakan nyata di rumah (seperti kebersihan dan membagi tugas domestik) dibandingkan sekadar kata-kata romantis.',
+                        strengths: ['Memastikan urusan logistik dan kerapian rumah berjalan lancar.', 'Pekerja keras dan sangat bertanggung jawab.', 'Tahu persis apa yang harus dilakukan setiap hari.'],
+                        challenges: ['Bisa menjadi cerewet jika kebiasaan pasangan kurang rapi.', 'Sering merasa kelelahan sendirian karena standar kerapian yang tinggi.'],
+                        growth: 'Turunkan sedikit standar kesempurnaan domestik Anda jika itu mulai merusak suasana hati (mood). Belajarlah mengompromikan standar kebersihan demi kedamaian.'
+                    };
+                } 
+                // 13. Mitra Sejalan (Kesetaraan Peran)
+                else if (d_Karier >= 3.8 && d_Keuangan >= 3.5) {
+                    return {
+                        title: 'Mitra Sejalan',
+                        desc: 'Anda memandang pernikahan murni sebagai kemitraan yang setara. Anda saling mendukung perkembangan karier satu sama lain dan tidak kaku pada peran gender tradisional.',
+                        strengths: ['Bekerja sama sebagai tim yang solid dan profesional.', 'Sangat saling mendukung ambisi dan pendidikan pasangan.', 'Berbagi beban secara logis dan adil.'],
+                        challenges: ['Dinamika rumah tangga bisa terasa transaksional (seperti rekan kerja).', 'Sulit menyesuaikan jadwal karena sama-sama sibuk.'],
+                        growth: 'Jangan lupa sisipkan romantisme yang spontan. Tinggalkan sejenak urusan jadwal, tugas, dan target pencapaian saat kalian sedang menikmati waktu berdua.'
+                    };
+                } 
+                // 14. Pelindung Privasi
+                else if (d_Kepercayaan >= 3.8 && d_TempatTinggal >= 3.5) {
+                    return {
+                        title: 'Pelindung Privasi',
+                        desc: 'Anda sangat menghargai ruang batas keluarga inti. Anda punya garis yang tegas mengenai campur tangan orang luar dan aturan soal apa yang boleh dibagikan ke ranah publik/sosial media.',
+                        strengths: ['Sangat pandai menjaga rahasia keluarga dari telinga luar.', 'Berkomitmen menciptakan rumah tangga yang mandiri.', 'Setia dan fokus pada kualitas hubungan dari dalam.'],
+                        challenges: ['Bisa terkesan tertutup atau antisosial di mata keluarga besar.', 'Sangat sensitif jika pasangan membagikan masalah (curhat) ke pihak ketiga.'],
+                        growth: 'Pertahankan batas privasi yang sehat, namun pastikan hal tersebut merupakan hasil kesepakatan berdua agar pasangan tidak merasa dikekang.'
+                    };
+                } 
+                // 16. Tipe Apa Adanya (Kejujuran Radikal)
+                else if (d_Komunikasi >= 3.8 && d_Kepercayaan >= 3.8) {
+                    return {
+                        title: 'Tipe Apa Adanya',
+                        desc: 'Anda sangat menjunjung tinggi kejujuran radikal. Anda transparan, tidak suka bermain kode, pantang menyimpan rahasia masa lalu, dan menuntut keterbukaan yang sama.',
+                        strengths: ['Komunikasi berjalan sangat lugas dan tanpa basa-basi.', 'Tidak ada rasa curiga yang berlebihan.', 'Pasangan selalu tahu di mana posisi hati dan pikiran Anda.'],
+                        challenges: ['Kejujuran Anda kadang disampaikan dengan bahasa yang terlalu blak-blakan.', 'Sulit memberikan toleransi pada kebohongan kecil sekecil apa pun.'],
+                        growth: 'Ingatlah bahwa kejujuran tanpa kelembutan bisa terasa seperti serangan. Pilihlah diksi yang lebih empatik saat Anda harus menyampaikan kenyataan pahit.'
+                    };
+                } 
+                // 8. Tempat Bersandar
+                else if (d_Komunikasi >= 3.8 && d_Emosi >= 3.5) {
+                    return {
+                        title: 'Tempat Bersandar',
+                        desc: 'Anda memiliki kapasitas luar biasa untuk mendengarkan keluh kesah pasangan tanpa terburu-buru menceramahinya. Pasangan merasa sangat tervalidasi saat bersama Anda.',
+                        strengths: ['Menjadi pendengar yang sangat baik dan memvalidasi perasaan.', 'Tidak mementingkan ego saat diajak berdiskusi.', 'Mudah memposisikan diri di sudut pandang pasangan (berempati).'],
+                        challenges: ['Cenderung lebih banyak menyerap masalah orang lain daripada mengungkapkan beban sendiri.', 'Rentan mengalami kelelahan empati (burnout).'],
+                        growth: 'Pastikan Anda juga mendapatkan ruang untuk berkeluh kesah. Pernikahan adalah jalan dua arah; biarkan pasangan Anda juga sesekali menjadi sandaran bagi Anda.'
+                    };
+                } 
+                // 5. Tipe Pengayom Hangat
+                else if (d_Kedekatan >= 3.8 && d_Emosi >= 3.5) {
+                    return {
+                        title: 'Tipe Pengayom Hangat',
+                        desc: 'Penuh empati dan menjadikan rumah sebagai tempat paling aman secara psikologis. Anda mengutamakan kasih sayang dan keintiman emosional di atas segalanya.',
+                        strengths: ['Sangat peka terhadap perubahan suasana hati pasangan.', 'Mampu menunjukkan kasih sayang yang tulus dan menenangkan.', 'Menjadi perekat emosional dalam keluarga.'],
+                        challenges: ['Sering kali rela mengorbankan kebutuhan diri sendiri demi kebahagiaan pasangan.', 'Mudah terluka jika merasa perhatiannya bertepuk sebelah tangan.'],
+                        growth: 'Kenali dan hargai bahasa cinta (love language) diri Anda sendiri. Tetapkan batasan agar Anda tidak terus-terusan mengorbankan kebahagiaan batin Anda.'
+                    };
+                } 
+                // 6. Si Kekeluargaan
+                else if (d_Keluarga >= 3.8 && d_Kedekatan >= 3.5) {
+                    return {
+                        title: 'Si Kekeluargaan',
+                        desc: 'Anda memandang pernikahan sebagai penyatuan dua keluarga besar, bukan sekadar dua individu. Menjaga tradisi dan silaturahmi dengan mertua adalah prioritas bagi Anda.',
+                        strengths: ['Memiliki rasa hormat dan bakti yang tinggi kepada orang tua/mertua.', 'Senang meramaikan momen kebersamaan dan tradisi hari raya.', 'Sumber dukungan sosial (social support) keluarga besar.'],
+                        challenges: ['Berisiko mengabaikan privasi keluarga inti jika terlalu menuruti mertua.', 'Bisa timbul gesekan jika pasangan lebih suka ruang yang sepi.'],
+                        growth: 'Silaturahmi memang penting, namun ingatlah bahwa setelah menikah, tanggung jawab tertinggi Anda adalah menjaga kesejahteraan keluarga inti (Anda dan Pasangan).'
+                    };
+                } 
+                // 1. Tipe Perencana Logis
+                else if (d_Keuangan >= 3.8 && d_Kesehatan >= 3.5) {
+                    return {
+                        title: 'Tipe Perencana Logis',
+                        desc: 'Fokus pada persiapan matang, tabungan darurat, dan jaminan kesehatan keluarga. Anda percaya bahwa cinta sejati diwujudkan melalui kepastian, tanggung jawab material, dan mitigasi risiko.',
+                        strengths: ['Manajemen risiko finansial yang sangat baik.', 'Bertanggung jawab dan rasional.', 'Membuat pasangan merasa sangat aman di masa depan.'],
+                        challenges: ['Bisa terlalu kaku pada anggaran hingga lupa menikmati hidup saat ini.', 'Terkadang logika menutupi kebutuhan validasi kasih sayang.'],
+                        growth: 'Cinta tidak selalu harus masuk akal secara hitungan matematis. Berikan kelonggaran untuk hal-hal yang bersifat kejutan dan nikmati momen hari ini berdua.'
+                    };
+                } 
+                // 4. Pilar Tangguh (Resilient)
+                else if (d_Kesehatan >= 3.8 && d_Kesiapan >= 3.5) {
+                    return {
+                        title: 'Pilar Tangguh',
+                        desc: 'Memiliki daya juang dan ketahanan mental yang sangat tinggi. Anda siap menghadapi kondisi terburuk dalam pernikahan (seperti krisis kesehatan atau ekonomi) tanpa mudah menyerah.',
+                        strengths: ['Tidak mudah patah arang saat dihantam musibah keluarga.', 'Setia mendampingi pasangan dalam kondisi sakit maupun susah.', 'Adaptif secara mental.'],
+                        challenges: ['Terkadang terlalu keras pada diri sendiri karena merasa harus selalu kuat.', 'Bisa mengabaikan keluhan kelelahan dari pasangan.'],
+                        growth: 'Tangguh itu luar biasa, tapi sadarilah bahwa menangis, merasa lemah, dan meminta bantuan orang lain di masa krisis juga merupakan hal yang sangat manusiawi.'
+                    };
+                } 
+                // 11. Pencari Titik Temu
+                else if (d_Nilai >= 3.8 && d_Konflik >= 3.5) {
+                    return {
+                        title: 'Pencari Titik Temu',
+                        desc: 'Anda menjunjung tinggi keadilan dan konsensus bersama. Anda percaya bahwa setiap perbedaan pendapat harus diselesaikan melalui negosiasi agar tidak ada yang merasa didominasi.',
+                        strengths: ['Penyelesai masalah (problem solver) yang adil.', 'Selalu membuka ruang diskusi yang objektif.', 'Sangat menghargai kesetaraan hak bersuara.'],
+                        challenges: ['Bisa menghabiskan terlalu banyak waktu untuk berdebat mencari jalan tengah.', 'Rentan cemas jika belum mencapai kesepakatan bulat.'],
+                        growth: 'Pahami bahwa ada beberapa hal kecil yang tidak perlu dinegosiasikan sampai detail. Belajar membedakan mana prinsip mutlak (dealbreaker) dan mana preferensi selera.'
+                    };
+                } 
+                // 15. Individu Mandiri
+                else if (d_Kesiapan >= 3.8 && d_Kepercayaan >= 3.5) {
+                    return {
+                        title: 'Individu Mandiri',
+                        desc: 'Anda bahagia dengan diri sendiri dan membutuhkan ruang (me-time) yang sehat. Anda sangat setia, namun Anda tidak mau menggantungkan seluruh kebahagiaan Anda di pundak pasangan.',
+                        strengths: ['Sangat stabil secara mental dan tidak manja berlebihan.', 'Memberikan kepercayaan penuh dan tidak mengekang pasangan.', 'Menghargai batasan masing-masing.'],
+                        challenges: ['Bisa disalahartikan sebagai sikap acuh tak acuh atau kurang perhatian.', 'Jarang meminta tolong walau sebenarnya membutuhkan.'],
+                        growth: 'Kemandirian adalah nilai plus, tapi pernikahan adalah soal saling membutuhkan. Jangan ragu untuk menunjukkan kerentanan Anda agar keintiman semakin terjalin.'
+                    };
+                } 
+                // 20. Penjaga Komitmen
+                else if (d_Agama >= 3.5 && d_Kesiapan >= 3.5) {
+                    return {
+                        title: 'Penjaga Komitmen',
+                        desc: 'Bagi Anda, kesepakatan pernikahan adalah janji absolut. Anda sangat pantang membicarakan perpisahan saat marah dan memiliki tingkat kesetiaan yang sangat tinggi pada komitmen moral.',
+                        strengths: ['Fondasi kesetiaan dan komitmen yang tidak diragukan.', 'Memiliki orientasi pada solusi jangka panjang, bukan emosi sesaat.', 'Menjadi pelabuhan yang aman bagi pasangan.'],
+                        challenges: ['Cenderung bertahan walau dalam kondisi emosional yang menyiksa jika tidak ada penyelesaian.', 'Terkadang kaku terhadap dinamika pasangan.'],
+                        growth: 'Komitmen memang harga mati, namun kebahagiaan harian juga harus terus disirami. Jangan hanya bertahan pada statusnya, tapi hidupkan terus romansa di dalamnya.'
+                    };
+                } 
+                // 18. Si Luwes & Adaptif (Default/Menengah)
+                else {
+                    return {
+                        title: 'Si Luwes & Adaptif',
+                        desc: 'Anda memiliki pandangan yang seimbang dan fleksibel. Anda tidak memaksakan standar kesempurnaan instan, sadar masih banyak belajar, dan siap beradaptasi seiring berjalannya waktu.',
+                        strengths: ['Sangat santai, fleksibel, dan mudah menyesuaikan diri.', 'Tidak memiliki ekspektasi yang menuntut dan membuat stres.', 'Terbuka menerima masukan dari bimbingan konselor.'],
+                        challenges: ['Beberapa rencana hidup ke depan mungkin masih samar-samar.', 'Bisa terbawa arus tanpa tujuan yang terarah jika pasangan juga pasif.'],
+                        growth: 'Sikap luwes Anda sangat bagus untuk adaptasi. Namun, Anda harus mulai memformulasikan rencana yang lebih terukur (misal: membahas keuangan dan domisili secara pasti).'
+                    };
                 }
             };
             const profile = getProfile();
