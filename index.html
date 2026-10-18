@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bimbingan Perkawinan - KUA Pulau Laut Tengah</title>
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: radial-gradient(circle at top, #f0f7ff 0%, #f8fafc 100%);
+            color: #1E293B; 
+            min-height: 100vh;
+        }
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .radio-label { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        input[type="radio"]:checked + .radio-label { 
+            background-color: #0F172A; color: white; border-color: #0F172A; 
+            transform: scale(1.02); box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.2); 
+        }
+        input[type="radio"]:focus-visible + .radio-label { outline: 2px solid #3B82F6; outline-offset: 2px; }
+        
+        .expand-content { transition: max-height 0.4s ease-in-out, opacity 0.4s ease-in-out, padding 0.4s ease-in-out; overflow: hidden; }
+        .expanded { max-height: 800px; opacity: 1; }
+        .collapsed { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; }
+
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+
+        @media print {
+            body { background: white; }
+            .no-print { display: none !important; }
+            .print-break { page-break-before: always; }
+            .shadow-sm, .shadow-md, .shadow-lg { box-shadow: none !important; border: 1px solid #E2E8F0; }
+            .expand-content { max-height: max-content !important; opacity: 1 !important; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        const scaleOptions = {
+            'kesiapan': [ { val: 1, label: 'Belum Siap' }, { val: 2, label: 'Kurang Yakin' }, { val: 3, label: 'Ragu-ragu' }, { val: 4, label: 'Cukup Siap' }, { val: 5, label: 'Sangat Siap' } ],
+            'kesepakatan': [ { val: 1, label: 'Belum Dibahas' }, { val: 2, label: 'Menggantung' }, { val: 3, label: 'Sedang Diskusi' }, { val: 4, label: 'Cukup Sepakat' }, { val: 5, label: 'Sepakat Penuh' } ],
+            'frekuensi': [ { val: 1, label: 'Sangat Jarang' }, { val: 2, label: 'Jarang' }, { val: 3, label: 'Kadang-kadang' }, { val: 4, label: 'Sering' }, { val: 5, label: 'Selalu' } ],
+            'sikap': [ { val: 1, label: 'Sangat Menolak' }, { val: 2, label: 'Kurang Sesuai' }, { val: 3, label: 'Netral' }, { val: 4, label: 'Sesuai' }, { val: 5, label: 'Sangat Sesuai' } ]
+        };
+
+        // Pemetaan Dimensi yang telah disesuaikan dan diseimbangkan
+        const rawQuestions = [
+            // 1. Kesiapan Pribadi (8 Butir)
+            { id: 1, dim: 'Kesiapan', scale: 'sikap', text: 'Saya memutuskan menikah karena kesiapan memikul tanggung jawab, bukan karena tuntutan sosial.' },
+            { id: 2, dim: 'Kesiapan', scale: 'sikap', text: 'Saya menyadari bahwa pernikahan akan mengubah sebagian prioritas kebebasan pribadi saya.' },
+            { id: 3, dim: 'Kesiapan', scale: 'kesiapan', text: 'Saya telah menyelesaikan urusan emosional masa lalu yang berpotensi mengganggu hubungan saat ini.' },
+            { id: 4, dim: 'Kesiapan', scale: 'sikap', text: 'Saya tidak melihat pernikahan sekadar sebagai jalan pintas untuk lari dari masalah pribadi.' },
+            { id: 5, dim: 'Kesiapan', scale: 'sikap', text: 'Saya memiliki gambaran realistis bahwa rutinitas rumah tangga menuntut komitmen yang konsisten.' },
+            { id: 96, dim: 'Kesiapan', scale: 'kesepakatan', text: 'Kami berkomitmen untuk terus memelajari manajemen rumah tangga walau sudah sah menikah.' },
+            { id: 99, dim: 'Kesiapan', scale: 'kesiapan', text: 'Jika ada prinsip mendasar yang belum tuntas saat ini, saya berani mendiskusikannya secara serius.' },
+            { id: 100, dim: 'Kesiapan', scale: 'kesiapan', text: 'Saya merasa tenang, sadar sepenuhnya, dan tidak berada di bawah paksaan untuk melangkah ke pernikahan ini.' },
+            
+            // 2. Nilai & Visi (8 Butir)
+            { id: 6, dim: 'Nilai', scale: 'sikap', text: 'Bagi saya, keluarga yang berhasil adalah yang selalu mengutamakan waktu bersama di atas segalanya.' },
+            { id: 7, dim: 'Nilai', scale: 'sikap', text: 'Pandangan hidup saya tentang kejujuran dan dedikasi sejalan dengan pandangan calon pasangan.' },
+            { id: 8, dim: 'Nilai', scale: 'kesiapan', text: 'Saya bersedia menyesuaikan ambisi pribadi jika kepentingan keluarga lebih membutuhkannya.' },
+            { id: 9, dim: 'Nilai', scale: 'kesepakatan', text: 'Kami telah membicarakan secara terbuka mengenai apa arti "kebahagiaan" dan "kesuksesan" bagi kami.' },
+            { id: 10, dim: 'Nilai', scale: 'sikap', text: 'Saya dapat menghargai perbedaan pandangan dalam keluarga selama nilai dasarnya tetap selaras.' },
+            { id: 91, dim: 'Nilai', scale: 'kesepakatan', text: 'Tujuan dan prioritas keluarga kami dalam 5-10 tahun ke depan sudah didiskusikan.' },
+            { id: 92, dim: 'Nilai', scale: 'sikap', text: 'Kami menyadari bahwa seiring berjalannya waktu, cita-cita dan prioritas hidup kami mungkin berkembang.' },
+            { id: 94, dim: 'Nilai', scale: 'sikap', text: 'Menikah berarti saya siap menyelaraskan impian pribadi dengan visi bersama.' },
+
+            // 3. Agama & Spiritual (5 Butir)
+            { id: 11, dim: 'Agama', scale: 'sikap', text: 'Penerapan nilai ibadah sehari-hari merupakan hal yang penting untuk diselaraskan dalam rumah tangga.' },
+            { id: 12, dim: 'Agama', scale: 'kesiapan', text: 'Saya dapat menerima tingkat ketaatan beragama pasangan tanpa memaksanya berubah secara instan.' },
+            { id: 13, dim: 'Agama', scale: 'kesepakatan', text: 'Kami telah berdiskusi bagaimana pendidikan agama akan diterapkan di dalam keluarga.' },
+            { id: 14, dim: 'Agama', scale: 'kesepakatan', text: 'Dalam mengambil keputusan berat, kami sepakat untuk menjadikan prinsip agama/moral sebagai rujukan.' },
+            { id: 15, dim: 'Agama', scale: 'sikap', text: 'Perbedaan pandangan mengenai moralitas seyogianya didiskusikan secara empatik, bukan saling menghakimi.' },
+
+            // 4. Keuangan & Ekonomi (8 Butir)
+            { id: 16, dim: 'Keuangan', scale: 'frekuensi', text: 'Saya terbiasa memantau pengeluaran dan memahami arus keuangan pribadi saya.' },
+            { id: 17, dim: 'Keuangan', scale: 'frekuensi', text: 'Saya telah menyampaikan secara transparan utang, tanggungan, maupun aset saya kepada pasangan.' },
+            { id: 18, dim: 'Keuangan', scale: 'kesepakatan', text: 'Kami telah membicarakan bagaimana skema pembiayaan kebutuhan rumah tangga akan dikelola bersama.' },
+            { id: 19, dim: 'Keuangan', scale: 'kesiapan', text: 'Saya merasa nyaman mendiskusikan masalah finansial dengan pasangan tanpa merasa tersudut.' },
+            { id: 20, dim: 'Keuangan', scale: 'sikap', text: 'Kecenderungan gaya hidup (hemat/konsumtif) kami dapat saling mengimbangi dengan baik.' },
+            { id: 86, dim: 'Keuangan', scale: 'kesepakatan', text: 'Kami sepakat untuk memprioritaskan dana cadangan keluarga sebelum pengeluaran gaya hidup.' },
+            { id: 88, dim: 'Keuangan', scale: 'kesiapan', text: 'Saya memiliki keyakinan kami dapat mencari solusi bersama jika dilanda kendala finansial.' },
+            { id: 89, dim: 'Keuangan', scale: 'sikap', text: 'Kami menyadari risiko besar di balik pinjaman tidak resmi atau kredit konsumtif yang berlebihan.' },
+
+            // 5. Karier & Peran Domestik (10 Butir)
+            { id: 21, dim: 'Karier', scale: 'sikap', text: 'Saya mendukung penuh perkembangan karier atau pendidikan pasangan saya.' },
+            { id: 22, dim: 'Karier', scale: 'kesepakatan', text: 'Kami telah membahas rencana penyesuaian jika salah satu pihak beralih profesi.' },
+            { id: 23, dim: 'Karier', scale: 'sikap', text: 'Jika penghasilan atau jabatan salah satu pihak lebih tinggi, saya menanggapinya secara suportif.' },
+            { id: 24, dim: 'Karier', scale: 'kesiapan', text: 'Saya bersedia mengelola jam kerja demi memastikan keseimbangan waktu bersama keluarga.' },
+            { id: 25, dim: 'Karier', scale: 'kesepakatan', text: 'Kami telah mendiskusikan rencana domisili terkait penempatan kerja di masa depan.' },
+            { id: 41, dim: 'Karier', scale: 'sikap', text: 'Pekerjaan rumah tangga adalah bentuk tanggung jawab dan kontribusi bersama.' },
+            { id: 42, dim: 'Karier', scale: 'kesiapan', text: 'Saya bersedia mengambil alih peran domestik pasangan ketika ia sedang kelelahan atau kurang sehat.' },
+            { id: 43, dim: 'Karier', scale: 'sikap', text: 'Pengambilan keputusan strategis dalam keluarga harus melibatkan hak suara kedua belah pihak.' },
+            { id: 44, dim: 'Karier', scale: 'kesepakatan', text: 'Kami telah berdiskusi untuk membagi peran berdasarkan kemampuan dan kesepakatan, bukan sekadar tradisi.' },
+            { id: 45, dim: 'Karier', scale: 'sikap', text: 'Bagi saya, keluarga yang bahagia dapat diwujudkan melalui kerja sama yang fleksibel antar pasangan.' },
+
+            // 6. Tempat Tinggal & Kebiasaan (10 Butir)
+            { id: 26, dim: 'TempatTinggal', scale: 'sikap', text: 'Saya memiliki preferensi untuk membangun kemandirian dengan tinggal terpisah dari orang tua.' },
+            { id: 27, dim: 'TempatTinggal', scale: 'kesepakatan', text: 'Kami telah menyepakati gambaran mengenai tempat tinggal kami di awal pernikahan.' },
+            { id: 28, dim: 'TempatTinggal', scale: 'sikap', text: 'Saya memandang pentingnya batasan privasi ruang keluarga inti dari campur tangan kerabat.' },
+            { id: 29, dim: 'TempatTinggal', scale: 'kesiapan', text: 'Jika harus tinggal bersama keluarga besar, saya siap menegosiasikan privasi yang sehat.' },
+            { id: 30, dim: 'TempatTinggal', scale: 'kesiapan', text: 'Saya mengerti bahwa kemandirian rumah tangga mencakup tanggung jawab atas kebersihan dan perawatan.' },
+            { id: 76, dim: 'TempatTinggal', scale: 'sikap', text: 'Standar kebersihan dan penataan rumah saya dapat dikompromikan dengan kebiasaan pasangan.' },
+            { id: 77, dim: 'TempatTinggal', scale: 'frekuensi', text: 'Saya terbiasa melakukan kemandirian dasar (menjaga kerapian ruang, mencuci peralatan sendiri).' },
+            { id: 78, dim: 'TempatTinggal', scale: 'kesepakatan', text: 'Kami telah membicarakan manajemen kebiasaan sehari-hari, seperti pola makan dan pengaturan belanja.' },
+            { id: 79, dim: 'TempatTinggal', scale: 'kesiapan', text: 'Jika kami memiliki jadwal harian yang berbeda, kami dapat mencari titik temu tanpa mengorbankan kenyamanan.' },
+            { id: 80, dim: 'TempatTinggal', scale: 'kesiapan', text: 'Saya memiliki kemauan untuk menyesuaikan kebiasaan yang sekiranya dapat mengganggu kenyamanan bersama.' },
+
+            // 7. Anak & Pengasuhan (10 Butir)
+            { id: 31, dim: 'Anak', scale: 'kesepakatan', text: 'Kami memiliki pemahaman yang searah mengenai perencanaan kehadiran anak.' },
+            { id: 32, dim: 'Anak', scale: 'kesepakatan', text: 'Kami telah bertukar pikiran mengenai perkiraan waktu yang adaptif untuk memulai program keluarga.' },
+            { id: 33, dim: 'Anak', scale: 'sikap', text: 'Saya menyadari bahwa mengasuh anak akan membutuhkan penyesuaian signifikan pada waktu dan rutinitas.' },
+            { id: 34, dim: 'Anak', scale: 'kesiapan', text: 'Apabila kami dihadapkan pada kendala medis terkait keturunan, kami siap melaluinya secara suportif.' },
+            { id: 35, dim: 'Anak', scale: 'kesepakatan', text: 'Kami pernah berbincang mengenai harapan jumlah anak dalam keluarga.' },
+            { id: 36, dim: 'Anak', scale: 'sikap', text: 'Saya tidak setuju dengan penggunaan kekerasan atau hukuman fisik yang berlebihan dalam mendidik anak.' },
+            { id: 37, dim: 'Anak', scale: 'sikap', text: 'Keterlibatan pengasuhan anak secara langsung adalah kewajiban yang diemban bersama.' },
+            { id: 38, dim: 'Anak', scale: 'kesepakatan', text: 'Kami telah mempertimbangkan batas keterlibatan keluarga besar dalam pola asuh anak kami kelak.' },
+            { id: 39, dim: 'Anak', scale: 'kesepakatan', text: 'Pemahaman kami mengenai nilai pendidikan dan pengembangan karakter anak cukup selaras.' },
+            { id: 40, dim: 'Anak', scale: 'kesepakatan', text: 'Kami bersepakat untuk tidak menunjukkan perbedaan pendapat terkait pengasuhan secara konfrontatif di depan anak.' },
+
+            // 8. Komunikasi (6 Butir)
+            { id: 46, dim: 'Komunikasi', scale: 'kesiapan', text: 'Saya berusaha menyampaikan rasa tidak nyaman tanpa melakukan aksi diam (silent treatment) yang berkepanjangan.' },
+            { id: 47, dim: 'Komunikasi', scale: 'frekuensi', text: 'Saat pasangan berbagi keluh kesah, saya berupaya mendengarkan secara empatik sebelum memberi solusi.' },
+            { id: 48, dim: 'Komunikasi', scale: 'frekuensi', text: 'Kami mulai terbiasa mendiskusikan topik-topik sensitif (masa lalu, keuangan, keintiman fisik) dengan transparan.' },
+            { id: 49, dim: 'Komunikasi', scale: 'sikap', text: 'Saya merasakan ruang yang aman untuk menjadi diri sendiri saat bersama pasangan.' },
+            { id: 50, dim: 'Komunikasi', scale: 'sikap', text: 'Saya menyadari bahwa mengabaikan komunikasi bukanlah metode yang produktif dalam menyelesaikan masalah.' },
+            { id: 97, dim: 'Komunikasi', scale: 'sikap', text: 'Harapan saya pada hubungan ini didasarkan pada realitas komunikasi saat ini, bukan angan-angan.' },
+
+            // 9. Manajemen Konflik (6 Butir)
+            { id: 51, dim: 'Konflik', scale: 'kesiapan', text: 'Saya melatih diri untuk meredam emosi agar terhindar dari mengucapkan kata-kata yang menjatuhkan.' },
+            { id: 52, dim: 'Konflik', scale: 'kesiapan', text: 'Saya bersedia berinisiatif untuk meminta maaf apabila menyadari letak kekeliruan saya.' },
+            { id: 53, dim: 'Konflik', scale: 'frekuensi', text: 'Setelah perbedaan pendapat mereda, kami terbiasa mengevaluasi akar masalahnya bersama.' },
+            { id: 54, dim: 'Konflik', scale: 'kesepakatan', text: 'Kami memiliki komitmen untuk menghindari ucapan atau ancaman perpisahan saat sedang emosional.' },
+            { id: 55, dim: 'Konflik', scale: 'kesiapan', text: 'Apabila kami menghadapi kendala yang berlarut-larut, kami terbuka menerima saran dari konselor.' },
+            { id: 98, dim: 'Konflik', scale: 'kesiapan', text: 'Saya meyakini kami dapat menemukan kompromi yang bermartabat meskipun pada isu yang pelik.' },
+
+            // 10. Kematangan Emosi (5 Butir)
+            { id: 56, dim: 'Emosi', scale: 'sikap', text: 'Saya memahami bahwa pemenuhan kesejahteraan mental saya adalah tanggung jawab pribadi yang utama.' },
+            { id: 57, dim: 'Emosi', scale: 'kesiapan', text: 'Saya berupaya mengelola tekanan eksternal agar tidak menjadi beban emosional di dalam hubungan.' },
+            { id: 58, dim: 'Emosi', scale: 'kesiapan', text: 'Saya dapat memproses saran yang membangun dari pasangan tanpa merasa harga diri saya direndahkan.' },
+            { id: 59, dim: 'Emosi', scale: 'frekuensi', text: 'Saya mengenali area emosi yang perlu saya perbaiki dan memiliki kemauan untuk menumbuhkan kedewasaan.' },
+            { id: 60, dim: 'Emosi', scale: 'sikap', text: 'Saya menerima pasangan sebagai manusia yang terus bertumbuh, bukan sosok yang harus sempurna.' },
+
+            // 11. Kedekatan & Keintiman (6 Butir)
+            { id: 61, dim: 'Kedekatan', scale: 'kesiapan', text: 'Saya menghargai dan mencoba memahami cara pasangan mengekspresikan perhatiannya.' },
+            { id: 62, dim: 'Kedekatan', scale: 'sikap', text: 'Kami merasa aman untuk bertukar pikiran mengenai harapan dan kebutuhan keintiman di antara kami.' },
+            { id: 63, dim: 'Kedekatan', scale: 'sikap', text: 'Kedekatan emosional melalui percakapan dan empati memiliki nilai yang sama pentingnya dengan keintiman fisik.' },
+            { id: 64, dim: 'Kedekatan', scale: 'sikap', text: 'Saya sangat menghargai prinsip persetujuan (consent) dan kenyamanan pasangan dalam interaksi fisik.' },
+            { id: 65, dim: 'Kedekatan', scale: 'kesiapan', text: 'Saya memberikan dukungan ketika pasangan membutuhkan waktu sejenak untuk dirinya sendiri (me-time).' },
+            { id: 95, dim: 'Kedekatan', scale: 'kesiapan', text: 'Saya siap memelihara rasa kasih sayang melewati berbagai fase usia dan dinamika kehidupan.' },
+
+            // 12. Kepercayaan & Privasi (5 Butir)
+            { id: 66, dim: 'Kepercayaan', scale: 'kesepakatan', text: 'Kami menyepakati batasan interaksi yang pantas untuk menjaga kepercayaan di dalam hubungan.' },
+            { id: 67, dim: 'Kepercayaan', scale: 'frekuensi', text: 'Kami membangun kepercayaan dalam pergaulan sosial masing-masing tanpa prasangka yang berlebihan.' },
+            { id: 68, dim: 'Kepercayaan', scale: 'frekuensi', text: 'Saya menghargai ruang privasi pasangan dengan komunikasi yang mengutamakan rasa saling percaya.' },
+            { id: 69, dim: 'Kepercayaan', scale: 'kesepakatan', text: 'Kami telah berdiskusi mengenai etika berbagi dinamika rumah tangga kepada pihak ketiga atau di media sosial.' },
+            { id: 70, dim: 'Kepercayaan', scale: 'kesepakatan', text: 'Kami sepakat untuk menjaga komitmen dengan menutup lembaran hubungan di masa lalu dengan pantas.' },
+
+            // 13. Keluarga Besar (5 Butir)
+            { id: 71, dim: 'Keluarga', scale: 'kesiapan', text: 'Jika timbul dinamika antara pasangan dan orang tua saya, saya berusaha menjembataninya dengan objektif.' },
+            { id: 72, dim: 'Keluarga', scale: 'kesepakatan', text: 'Kami membicarakan batasan yang bijak terkait saran dan masukan dari pihak orang tua.' },
+            { id: 73, dim: 'Keluarga', scale: 'kesiapan', text: 'Saya berupaya menghormati kebiasaan dan tradisi keluarga besar pasangan dengan lapang dada.' },
+            { id: 74, dim: 'Keluarga', scale: 'kesepakatan', text: 'Kami mendiskusikan pengaturan waktu untuk keluarga besar masing-masing secara berimbang.' },
+            { id: 75, dim: 'Keluarga', scale: 'kesepakatan', text: 'Kami pernah berbincang tentang penyesuaian dukungan finansial atau emosional untuk keluarga asal.' },
+
+            // 14. Kesehatan & Ketahanan (8 Butir)
+            { id: 81, dim: 'Kesehatan', scale: 'sikap', text: 'Saya telah berbagi informasi kesehatan fisik/mental yang relevan untuk perencanaan keluarga kami.' },
+            { id: 82, dim: 'Kesehatan', scale: 'sikap', text: 'Kami saling memotivasi dalam menjaga kebugaran, asupan, dan pola hidup yang menyehatkan.' },
+            { id: 83, dim: 'Kesehatan', scale: 'kesiapan', text: 'Saya menyiapkan mental untuk menjadi sistem pendukung utama saat pasangan mengalami kondisi tidak sehat.' },
+            { id: 84, dim: 'Kesehatan', scale: 'sikap', text: 'Pemenuhan proteksi kesehatan (seperti BPJS/Asuransi) merupakan elemen mitigasi keluarga yang penting.' },
+            { id: 85, dim: 'Kesehatan', scale: 'sikap', text: 'Saya menerima bahwa perubahan fisik seiring waktu dan peran keluarga adalah bagian dari perjalanan kehidupan.' },
+            { id: 87, dim: 'Kesehatan', scale: 'kesiapan', text: 'Apabila terjadi perubahan situasi pekerjaan, kami mampu beradaptasi dan menyesuaikan rencana pengeluaran.' },
+            { id: 90, dim: 'Kesehatan', scale: 'kesiapan', text: 'Saya memiliki kerelaan untuk bergotong-royong secara ekonomi jika situasi pasangan mengharuskannya demikian.' },
+            { id: 93, dim: 'Kesehatan', scale: 'frekuensi', text: 'Kami mengomunikasikan angan-angan dan persiapan untuk merawat kesejahteraan di usia senja.' }
+        ];
+
+        const dimensiNames = {
+            'Kesiapan': 'Kesiapan Pribadi', 'Nilai': 'Nilai & Visi', 'Agama': 'Agama & Spiritual',
+            'Keuangan': 'Keuangan & Ekonomi', 'Karier': 'Peran & Tanggung Jawab', 'TempatTinggal': 'Manajemen Domestik',
+            'Anak': 'Anak & Pengasuhan', 'Komunikasi': 'Komunikasi', 'Konflik': 'Manajemen Konflik',
+            'Emosi': 'Kematangan Emosi', 'Kedekatan': 'Kedekatan & Keintiman', 'Kepercayaan': 'Kepercayaan & Privasi',
+            'Keluarga': 'Keluarga Besar', 'Kesehatan': 'Kesehatan & Ketahanan'
+        };
+
+        // --- KOMPONEN APLIKASI UTAMA ---
+        function App() {
+            const [userInfo, setUserInfo] = useState({ name: '', age: '' });
+            const [screen, setScreen] = useState('home');
+            const [currentRound, setCurrentRound] = useState(1);
+            const [answers, setAnswers] = useState({});
+            const [shuffledQuestions, setShuffledQuestions] = useState([]);
+            const questionRefs = useRef({});
+
+            // Load dari LocalStorage & Inisialisasi Soal
+            useEffect(() => {
+                const savedAnswers = localStorage.getItem('kua_mrt_answers');
+                if (savedAnswers) setAnswers(JSON.parse(savedAnswers));
+                const savedUser = localStorage.getItem('kua_mrt_user');
+                if (savedUser) setUserInfo(JSON.parse(savedUser));
+
+                const savedOrder = localStorage.getItem('kua_mrt_order');
+                if (savedOrder) {
+                    const orderIds = JSON.parse(savedOrder);
+                    const reordered = orderIds.map((id, index) => {
+                        const q = rawQuestions.find(rq => rq.id === id);
+                        return { ...q, round: Math.floor(index / 5) + 1 };
+                    });
+                    setShuffledQuestions(reordered);
+                } else {
+                    const shuffled = [...rawQuestions].sort(() => Math.random() - 0.5).map((q, idx) => ({
+                        ...q, round: Math.floor(idx / 5) + 1
+                    }));
+                    localStorage.setItem('kua_mrt_order', JSON.stringify(shuffled.map(q => q.id)));
+                    setShuffledQuestions(shuffled);
+                }
+            }, []);
+
+            // Save ke LocalStorage saat answers berubah
+            useEffect(() => {
+                localStorage.setItem('kua_mrt_answers', JSON.stringify(answers));
+            }, [answers]);
+            useEffect(() => {
+                localStorage.setItem('kua_mrt_user', JSON.stringify(userInfo));
+            }, [userInfo]);
+
+            // Prevent Window Close
+            useEffect(() => {
+                const handleBeforeUnload = (e) => {
+                    const ansCount = Object.keys(answers).length;
+                    if (ansCount > 0 && ansCount < 100 && screen !== 'result') {
+                        e.preventDefault();
+                        e.returnValue = '';
+                    }
+                };
+                window.addEventListener('beforeunload', handleBeforeUnload);
+                return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+            }, [answers, screen]);
+
+            const startTest = () => {
+                setScreen('test');
+                window.scrollTo(0, 0);
+            };
+
+            const resetTest = () => {
+                if (window.confirm("Anda yakin ingin menghapus seluruh progres dan mengulangi refleksi?")) {
+                    localStorage.removeItem('kua_mrt_answers');
+                    localStorage.removeItem('kua_mrt_order');
+                    window.location.reload();
+                }
+            };
+
+            const handleAnswer = (qId, val, idxInRound) => {
+                setAnswers(prev => ({ ...prev, [qId]: val }));
+                setTimeout(() => {
+                    const nextIdx = idxInRound + 1;
+                    if (nextIdx < 5) {
+                        const nextQId = shuffledQuestions.filter(q => q.round === currentRound)[nextIdx].id;
+                        const el = questionRefs.current[nextQId];
+                        if (el) {
+                            const y = el.getBoundingClientRect().top + window.scrollY - 180; 
+                            window.scrollTo({ top: y, behavior: 'smooth' });
+                        }
+                    }
+                }, 250);
+            };
+
+            const handleNextRound = () => {
+                if (currentRound < 20) {
+                    setCurrentRound(prev => prev + 1);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    setScreen('result');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            };
+
+            return (
+                <div className="min-h-screen pb-20">
+                    <header className="bg-white/80 backdrop-blur-lg border-b border-slate-200 sticky top-0 z-50 no-print shadow-sm">
+                        <div className="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Kementerian_Agama_new_logo.png/640px-Kementerian_Agama_new_logo.png" alt="Logo" className="w-8 h-8 md:w-10 md:h-10"/>
+                                <div className="flex flex-col">
+                                    <span className="font-extrabold text-base md:text-lg text-slate-800 tracking-tight leading-none">Bimbingan Perkawinan</span>
+                                    <span className="text-[10px] md:text-[11px] font-bold text-emerald-600 mt-1 uppercase tracking-wider">KUA Kec. Pulau Laut Tengah</span>
+                                </div>
+                            </div>
+                            {screen === 'test' && (
+                                <div className="text-xs font-bold text-white bg-slate-900 px-4 py-1.5 rounded-full shadow-md">
+                                    Tahap {currentRound}/20
+                                </div>
+                            )}
+                        </div>
+                    </header>
+
+                    <main className="max-w-3xl mx-auto px-4 pt-6">
+                        {screen === 'home' && <Home onStart={startTest} answeredCount={Object.keys(answers).length} onReset={resetTest} userInfo={userInfo} setUserInfo={setUserInfo} />}
+                        {screen === 'test' && (
+                            <Test 
+                                currentRound={currentRound}
+                                questions={shuffledQuestions}
+                                answers={answers}
+                                onAnswer={handleAnswer}
+                                onNext={handleNextRound}
+                                onPrev={() => { setCurrentRound(p => p - 1); window.scrollTo(0,0); }}
+                                questionRefs={questionRefs}
+                            />
+                        )}
+                        {screen === 'result' && <Result answers={answers} onRestart={resetTest} userInfo={userInfo} />}
+                    </main>
+                </div>
+            );
+        }
+
+        // --- HALAMAN DEPAN ---
+        function Home({ onStart, answeredCount, onReset, userInfo, setUserInfo }) {
+            return (
+                <div className="fade-in space-y-8 mt-6 text-center">
+                    <div className="space-y-4">
+                        <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 leading-tight tracking-tight">
+                            Kenali dirimu,<br/>pahami pasanganmu.
+                        </h1>
+                        <p className="text-slate-600 text-lg md:text-xl max-w-xl mx-auto">
+                            Alat bantu refleksi interaktif untuk memetakan kesiapan nilai, emosi, komunikasi, dan visi rumah tangga.
+                        </p>
+                    </div>
+
+                    <div className="bg-white/60 backdrop-blur-md p-6 md:p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-white text-left max-w-xl mx-auto space-y-5">
+                        <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl mb-4">
+                            <p className="text-xs md:text-sm text-amber-800 text-justify leading-relaxed font-medium">
+                                <strong>Penting:</strong> Alat ini adalah media refleksi edukatif pendamping bimbingan perkawinan. Instrumen ini <strong>bukanlah tes psikologi klinis</strong>, bukan alat penentu sah/tidaknya kelayakan menikah, dan tidak menggantikan sesi konseling profesional.
+                            </p>
+                        </div>
+                        
+                        {answeredCount > 0 && answeredCount < 100 && (
+                            <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex justify-between items-center">
+                                <span className="text-sm font-bold text-blue-800">Progres tersimpan: {answeredCount}%</span>
+                                <button onClick={onReset} className="text-xs bg-white text-slate-600 border px-3 py-1.5 rounded-lg hover:bg-slate-100">Hapus & Ulang</button>
+                            </div>
+                        )}
+                        <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-4">
+                            <p className="text-sm font-bold text-slate-800">Data Diri Calon Pengantin</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">Nama Panggilan</label>
+                                    <input type="text" value={userInfo.name} onChange={(e) => setUserInfo({...userInfo, name: e.target.value})} placeholder="Misal: Budi" className="w-full bg-white border border-slate-300 p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">Usia Saat Ini</label>
+                                    <input type="number" value={userInfo.age} onChange={(e) => setUserInfo({...userInfo, age: e.target.value})} placeholder="Misal: 25" className="w-full bg-white border border-slate-300 p-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="pt-2">
+                            <button 
+                                onClick={onStart}
+                                disabled={!userInfo.name || !userInfo.age}
+                                className={`w-full font-bold text-lg py-4 rounded-2xl transition-all shadow-lg flex justify-center items-center gap-2 ${(!userInfo.name || !userInfo.age) ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-800 text-white hover:shadow-slate-900/30 active:scale-[0.98]'}`}
+                            >
+                                {answeredCount > 0 ? 'Lanjutkan Refleksi →' : 'Mulai Refleksi Diri →'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- HALAMAN TES ---
+        function Test({ currentRound, questions, answers, onAnswer, onNext, onPrev, questionRefs }) {
+            const roundQuestions = questions.filter(q => q.round === currentRound);
+            const answeredCount = Object.keys(answers).length;
+            const progress = (answeredCount / 100) * 100;
+            const isRoundComplete = roundQuestions.every(q => answers[q.id] !== undefined);
+
+            return (
+                <div className="fade-in space-y-8">
+                    <div className="bg-white/80 backdrop-blur-md p-5 rounded-3xl shadow-sm border border-slate-200 sticky top-[68px] z-40">
+                        <div className="flex justify-between items-center mb-3">
+                            <h2 className="font-bold text-slate-800 text-sm md:text-base">Eksplorasi Tahap {currentRound}</h2>
+                            <span className="text-[11px] font-extrabold text-blue-700 bg-blue-100 px-3 py-1 rounded-full">{Math.round(progress)}% Selesai</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                            <div className="bg-slate-900 h-full transition-all duration-300 rounded-full" style={{ width: `${progress}%` }}></div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        {roundQuestions.map((q, idx) => (
+                            <div 
+                                key={q.id} 
+                                ref={el => questionRefs.current[q.id] = el}
+                                className={`bg-white/80 backdrop-blur-sm p-6 md:p-8 rounded-3xl shadow-sm border transition-all duration-300 ${answers[q.id] ? 'border-slate-800/30 bg-white shadow-md' : 'border-slate-200 hover:border-blue-300'}`}
+                            >
+                                <p className="text-slate-800 font-semibold md:text-lg mb-6 leading-relaxed text-justify">
+                                    {q.text}
+                                </p>
+                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 md:gap-3">
+                                    {scaleOptions[q.scale].map(opt => (
+                                        <div key={opt.val} className={`relative ${opt.val === 5 ? 'col-span-2 sm:col-span-1' : ''}`}>
+                                            <input 
+                                                type="radio" 
+                                                name={`q-${q.id}`} 
+                                                id={`q-${q.id}-${opt.val}`} 
+                                                className="opacity-0 absolute w-full h-full cursor-pointer z-10"
+                                                checked={answers[q.id] === opt.val}
+                                                onChange={() => onAnswer(q.id, opt.val, idx)}
+                                            />
+                                            <label 
+                                                htmlFor={`q-${q.id}-${opt.val}`} 
+                                                className="radio-label block w-full h-full text-center text-xs md:text-sm py-3 px-1 rounded-2xl border-2 border-slate-200 bg-white text-slate-600 font-bold flex items-center justify-center cursor-pointer shadow-sm"
+                                            >
+                                                {opt.label}
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="flex justify-between items-center pt-2 pb-10">
+                        <button 
+                            onClick={onPrev}
+                            disabled={currentRound === 1}
+                            className={`px-6 py-3.5 rounded-2xl font-bold transition ${currentRound === 1 ? 'opacity-0 cursor-default' : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 shadow-sm'}`}
+                        >
+                            ← Kembali
+                        </button>
+                        
+                        <button 
+                            onClick={onNext}
+                            disabled={!isRoundComplete}
+                            className={`px-8 py-3.5 rounded-2xl font-bold transition-all shadow-md ${!isRoundComplete ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-slate-900 text-white hover:bg-slate-800 hover:shadow-lg hover:-translate-y-0.5'}`}
+                        >
+                            {currentRound === 20 ? 'Lihat Hasil Analisis' : 'Selanjutnya →'}
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- HALAMAN HASIL & PENAFSIRAN ---
+        function Result({ answers, onRestart, userInfo }) {
+            // 1. HITUNG SKOR TERLEBIH DAHULU (Agar bisa dipakai oleh fungsi di bawahnya)
+            const dimScores = useMemo(() => {
+                const sums = {}; const counts = {};
+                Object.keys(dimensiNames).forEach(k => { sums[k] = 0; counts[k] = 0; });
+                
+                rawQuestions.forEach(q => {
+                    if (answers[q.id]) { sums[q.dim] += answers[q.id]; counts[q.dim] += 1; }
+                });
+                
+                const averages = {};
+                for (let d in sums) averages[d] = counts[d] > 0 ? sums[d] / counts[d] : 3;
+                return averages;
+            }, [answers]);
+
+            // 2. DATA PENGGUNA & SIMULASI USIA
+            const userAge = parseInt(userInfo?.age) || 25;
+            const userName = userInfo?.name || "Anda";
+            const [activeMilestone, setActiveMilestone] = useState(0);
+
+            const getMilestone1 = () => {
+                if (userAge < 25) return `Di usia ${userAge + 1} ini, kalian masih sama-sama bertumbuh mencari jati diri, tapi kini harus belajar memikul tanggung jawab rumah tangga. Kuncinya: banyakin sabar dan jangan gengsi minta maaf kalau salah.`;
+                if (userAge >= 35) return `Di usia ${userAge + 1}, kalian berdua masuk ke pernikahan dengan karakter dan kebiasaan yang sudah mapan. Tantangan terbesarnya adalah meruntuhkan ego masing-masing agar bisa melebur jadi satu tim yang kompak.`;
+                return `Di usia ${userAge + 1} tahun, masa bulan madu perlahan digantikan oleh rutinitas harian. Ini fase paling krusial untuk ngobrolin soal dompet, urusan cucian, dan menyatukan dua kebiasaan yang beda. Wajar kalau sesekali ada gesekan.`;
+            };
+
+            const getMilestone2 = () => {
+                let age = userAge + 5;
+                if (age < 35) return `Lima tahun berlalu. Di usia ${age} ini, kalian mungkin lagi sibuk-sibuknya merintis karier atau kurang tidur karena urusan anak. Hati-hati, saking capeknya kalian bisa tanpa sadar berubah jadi 'cuma teman sekamar'.`;
+                if (age >= 45) return `Di titik ini, fokus kalian mungkin lebih banyak ke stabilitas atau merawat anggota keluarga lain. Sesibuk apapun peran kalian, jangan sampai lupa meluangkan waktu buat sekadar tertawa berdua.`;
+                return `Memasuki usia ${age} tahun, biasanya ini puncak kepadatan hidup. Uang sekolah, cicilan, dan tekanan kerja numpuk jadi satu. Tolong sempatkan ngobrol santai 15 menit tiap malam tanpa bawa-bawa urusan tagihan atau kerjaan.`;
+            };
+
+            const getMilestone3 = () => {
+                return `Di usia ${userAge + 10} tahun, kalian sudah hafal luar dalam sifat pasangan. Hidup terasa lebih stabil, tapi awas, rasa bosan gampang banget menyelinap masuk. Kalian butuh 'menyegarkan' lagi alasan kenapa dulu saling memilih biar cinta kalian nggak terasa hambar.`;
+            };
+
+            const ageM4 = Math.max(userAge + 15, 50);
+            const getMilestone4 = () => {
+                if (userAge + 15 < 50) return `Memasuki usia kepala lima nanti (${ageM4} tahun), prioritas hidup pelan-pelan berubah. Kalau punya anak, rumah mungkin mulai terasa sepi karena mereka sibuk sendiri. Ini waktunya kalian "pacaran" lagi dan cari hobi baru bareng-bareng.`;
+                return `Di usia ${ageM4} tahun, ritme hidup mulai bergeser. Ambisi kerja mungkin perlahan mereda, berganti dengan keinginan mencari ketenangan batin. Jadikan rumah sebagai tempat paling nyaman dan aman untuk saling bersandar.`;
+            };
+
+            const ageM5 = Math.max(userAge + 25, 60);
+            const getMilestone5 = () => {
+                return `Di usia senja ${ageM5} tahun, fisik tentu tak sekuat dulu. Di fase ini, pasangan bukan lagi sekadar rekan berbagi tugas, melainkan sahabat paling setia. Teman untuk saling merawat, bernostalgia, dan mensyukuri manis pahitnya jalan panjang yang sudah dilewati bersama.`;
+            };
+
+            const milestones = [
+                { year: 1, age: userAge + 1, title: 'Menyapu Realitas', icon: '🌱', desc: getMilestone1() },
+                { year: 5, age: userAge + 5, title: 'Fase Sibuk & Lelah', icon: '🏃', desc: getMilestone2() },
+                { year: 10, age: userAge + 10, title: 'Mencari Kesegaran', icon: '🏡', desc: getMilestone3() },
+                { year: ageM4 - userAge, age: ageM4, title: 'Masa Transisi', icon: '☕', desc: getMilestone4() },
+                { year: ageM5 - userAge, age: ageM5, title: 'Menua Bersama', icon: '🌅', desc: getMilestone5() }
+            ];
+
+            // 3. FUNGSI SKENARIO DINAMIS BERDASARKAN HASIL SURVEI
+            const getDynamicScenarios = () => {
+                const sortedDims = Object.entries(dimScores).sort((a,b) => b[1] - a[1]);
+                const topDim = sortedDims[0][0];
+                const lowestDim = sortedDims[sortedDims.length - 1][0];
+
+                let kekuatan = ""; let realitas = ""; let risiko = "";
+
+                // KEKUATAN
+                if (topDim === 'Keuangan' || topDim === 'MasaDepan') {
+                    kekuatan = `Kabar baiknya, ${userName}, kalian punya fondasi yang sangat kokoh soal tanggung jawab materi dan masa depan. Karena kalian rasional dan saling terbuka soal keuangan, rintangan dari luar (seperti rezeki yang lagi seret atau cicilan) nggak akan gampang meruntuhkan kalian. Terus jadikan keterbukaan ini sebagai perisai keluarga, ya.`;
+                } else if (topDim === 'Komunikasi' || topDim === 'Konflik') {
+                    kekuatan = `Kabar baiknya, ${userName}, kalian dibekali 'senjata' paling ampuh dalam pernikahan: komunikasi yang sehat. Kemauan kalian untuk mau saling dengar dan nggak gengsi minta maaf itu mahal banget harganya. Badai sederas apapun di luar sana nggak akan bikin rumah tangga kalian goyah, selama kalian tetap mau ngobrol dari hati ke hati seperti sekarang.`;
+                } else if (topDim === 'Kedekatan' || topDim === 'Emosi') {
+                    kekuatan = `Kabar baiknya, ${userName}, kalian punya ikatan batin dan kematangan emosi yang sangat hangat. Kalian memandang pasangan sebagai tempat bersandar. Kehangatan inilah yang bakal bikin rumah kalian benar-benar terasa seperti 'tempat pulang' paling melegakan saat salah satu dari kalian lagi lelah menghadapi kerasnya dunia luar.`;
+                } else {
+                    kekuatan = `Kabar baiknya, ${userName}, dari jawaban-jawaban tadi terlihat ada niat tulus untuk saling menghargai. Kalau niat baik dan keterbukaan ini terus dirawat, kalian nggak akan gampang goyah walau lagi dihantam ujian. Rumah akan tetap terasa nyaman karena kalian sudah sepakat untuk maju sebagai satu tim, bukan saling menyalahkan saat ada masalah.`;
+                }
+
+                // REALITAS
+                if (dimScores['TempatTinggal'] < 4 || dimScores['Karier'] < 4) {
+                    realitas = `Di dunia nyata nanti, bayangan romantis sering kali diuji oleh hal-hal sepele. Perdebatan justru gampang tersulut gara-gara siapa yang cuci piring, naruh handuk sembarangan, atau karena sama-sama capek pulang kerja. Jangan kaget, ya. Kedewasaan cinta kalian justru paling diuji di momen-momen rutinitas domestik yang membosankan ini. Belajarlah untuk memaklumi kekurangan kecil pasangan.`;
+                } else if (dimScores['Keluarga'] < 4) {
+                    realitas = `Setelah menikah nanti, kalian nggak cuma menyatukan dua kepala, tapi dua keluarga besar. Realitasnya, sangat mungkin akan ada gesekan soal tradisi, jadwal mudik, atau ekspektasi dari mertua. Wajar kalau ada sedikit rasa nggak nyaman di awal. Yang paling penting, kalian berdua harus kompak dan menjadikan keluarga inti kalian sebagai prioritas nomor satu.`;
+                } else {
+                    realitas = `Di kehidupan nyata nanti, fase bulan madu pasti perlahan berganti dengan rutinitas. Bangun pagi, kerja, bayar tagihan, ngurus rumah, begitu terus. Tantangan terbesar kalian adalah menjaga agar kalian nggak sekadar berubah jadi "teman sekamar" atau "partner bayar cicilan". Sempatkan terus waktu buat pacaran berdua walau cuma 15 menit, biar rasanya nggak hambar.`;
+                }
+
+                // RISIKO
+                if (lowestDim === 'Keuangan') {
+                    risiko = `Ada satu hal krusial yang perlu ${userName} waspadai: urusan uang. Jangan pernah memendam rasa nggak nyaman soal pengeluaran, utang, atau bantuan buat kerabat, cuma karena alasan 'nggak enak hati'. Uang itu isu sensitif yang bisa jadi bom waktu kalau ditutup-tutupi. Mumpung masih di awal, biasakan untuk transparan sampai ke hal yang paling kecil.`;
+                } else if (lowestDim === 'Komunikasi' || lowestDim === 'Konflik') {
+                    risiko = `Hati-hati dengan kebiasaan mendiamkan masalah (silent treatment) atau menghindar saat lagi marah. Sesuatu yang dipendam sekarang bisa numpuk jadi rasa kesal yang meledak di kemudian hari. Jangan juga berharap pasangan bisa selalu menebak pikiranmu. Mulailah berlatih jujur menyampaikan rasa kecewa dengan nada yang tetap lembut.`;
+                } else if (lowestDim === 'Anak' || lowestDim === 'Nilai') {
+                    risiko = `Ada area prinsipil yang sepertinya belum kalian sepakati sepenuhnya, mungkin soal pandangan masa depan atau pola asuh anak. Bahayanya adalah kalau kalian berasumsi "Ah, nanti juga dia akan berubah sendiri setelah menikah". Jangan berharap perubahan instan, ya. Selesaikan perbedaan prinsip yang tajam ini dengan kepala dingin sebelum melangkah terlalu jauh.`;
+                } else {
+                    risiko = `Ada satu hal yang perlu ${userName} hindari: kebiasaan menahan rasa tidak nyaman karena 'nggak enak hati'. Sesuatu yang dipendam sekarang bisa menumpuk jadi rasa kesal yang siap meledak di waktu yang salah. Menyampaikan ketidaksetujuan itu sangat boleh dan menyehatkan, asalkan disampaikan dengan bahasa yang penuh kasih sayang.`;
+                }
+
+                return { kekuatan, realitas, risiko };
+            };
+            const dynamicScenarios = getDynamicScenarios();
+
+            // Red Flags Deteksi
+            const fatalWarnings = useMemo(() => {
+                const warnings = [];
+                if (answers[36] <= 2) warnings.push("Toleransi atau persepsi mengenai penggunaan hukuman fisik/kekerasan.");
+                if (answers[54] <= 2) warnings.push("Kecenderungan menormalisasi ancaman perpisahan (cerai) saat terjadi konflik.");
+                if (answers[64] <= 2) warnings.push("Perbedaan pemahaman mengenai persetujuan (consent) dan pemaksaan interaksi fisik.");
+                if (answers[100] <= 2) warnings.push("Indikasi adanya keraguan mendasar atau unsur tekanan dari pihak luar sebelum ijab kabul.");
+                return warnings;
+            }, [answers]);
+
+            // Logic Partner Code
+            const [partnerCodeInput, setPartnerCodeInput] = useState('');
+            const [partnerData, setPartnerData] = useState(null);
+
+            const myCode = useMemo(() => {
+                const arr = Object.keys(dimensiNames).map(k => dimScores[k]);
+                return btoa(JSON.stringify(arr.map(n => Math.round(n * 10))));
+            }, [dimScores]);
+
+            const handleCheckPartner = () => {
+                try {
+                    const arr = JSON.parse(atob(partnerCodeInput.trim()));
+                    if (Array.isArray(arr) && arr.length === Object.keys(dimensiNames).length) {
+                        const pObj = {};
+                        Object.keys(dimensiNames).forEach((k, i) => pObj[k] = arr[i] / 10);
+                        setPartnerData(pObj);
+                    } else {
+                        alert("Kode tidak valid. Pastikan Anda menyalin kode dengan benar.");
+                    }
+                } catch(e) {
+                    alert("Kode tidak dikenali atau salah format.");
+                }
+            };
+
+            const [activeScenarioTab, setActiveScenarioTab] = useState('kekuatan');
+            const [expandedDim, setExpandedDim] = useState(null); 
+            const [flippedInsights, setFlippedInsights] = useState({}); 
+
+            const toggleDim = (dimName) => setExpandedDim(expandedDim === dimName ? null : dimName);
+
+            const getDimensiInfo = (dimKey, score) => {
+                const infoDict = {
+                    'Kesiapan': { icon: '🧠' }, 'Nilai': { icon: '🎯' }, 'Agama': { icon: '🕊️' },
+                    'Keuangan': { icon: '💰' }, 'Karier': { icon: '⚖️' }, 'TempatTinggal': { icon: '🏠' },
+                    'Anak': { icon: '👶' }, 'Komunikasi': { icon: '💬' }, 'Konflik': { icon: '⚔️' },
+                    'Emosi': { icon: '🧘' }, 'Kedekatan': { icon: '❤️' }, 'Kepercayaan': { icon: '🤝' },
+                    'Keluarga': { icon: '👨‍👩‍👧‍👦' }, 'Kesehatan': { icon: '⚕️' }
+                };
+                const info = infoDict[dimKey];
+                let interp = ""; let rec = "";
+                if (score >= 4.0) {
+                    interp = `Anda menunjukkan kapasitas yang matang di area ini. Pemahaman dan keterbukaan komunikasi telah terbangun dengan baik.`;
+                    rec = `Jadikan aspek ini sebagai pondasi kekuatan keluarga. Tetap rawat keterbukaan ini agar senantiasa harmonis.`;
+                } else if (score >= 3.0) {
+                    interp = `Fondasi Anda cukup baik, namun masih terdapat beberapa ekspektasi atau kesepakatan yang sifatnya belum final (menggantung).`;
+                    rec = `Ajak pasangan berbincang santai. Ubah keraguan Anda menjadi kesepakatan spesifik yang bisa diterima bersama.`;
+                } else {
+                    interp = `Area ini memerlukan perhatian lebih saksama. Terdapat indikasi keraguan, pandangan yang berbeda, atau minimnya diskusi mendalam terkait isu ini.`;
+                    rec = `Kami merekomendasikan Anda untuk mendiskusikannya dengan kepala dingin sebelum melangkah lebih jauh. Jangan biarkan ketidakpastian ini terbawa hingga setelah pernikahan.`;
+                }
+                return { ...info, title: dimensiNames[dimKey], interp, rec };
+            };
+// --- LOGIKA ANALISIS KESENJANGAN PASANGAN ---
+            const getGapAnalysis = (dimKey, myScore, partnerScore) => {
+                const gap = Math.abs(myScore - partnerScore);
+                let status = "";
+                let interp = "";
+                let advice = "";
+
+                if (gap <= 0.6) {
+                    status = "Sangat Selaras";
+                    interp = "Kalian memiliki tingkat pemahaman dan kesiapan yang hampir sama di area ini. Kesamaan frekuensi ini adalah modal saling percaya yang luar biasa untuk rumah tangga.";
+                    advice = "Jadikan keselarasan di area ini sebagai 'jangkar' penyatu saat kalian sedang berselisih di urusan lain. Berikan apresiasi pada pasangan atas kesamaan visi ini.";
+                } else if (gap <= 1.4) {
+                    status = "Perbedaan Terukur";
+                    interp = "Terdapat sedikit perbedaan sudut pandang. Salah satu dari kalian mungkin memandang area ini lebih mendesak atau memiliki ekspektasi yang sedikit berbeda.";
+                    advice = "Gunakan prinsip 'Mendengarkan untuk Memahami, Bukan Membalas'. Tanyakan dengan lembut mengapa pasangan memiliki pandangan tersebut, lalu cari jalan tengah yang saling mengakomodasi.";
+                } else {
+                    status = "Kesenjangan Signifikan";
+                    interp = "Terdapat jarak pandangan yang cukup tajam. Jika tidak dibicarakan, perbedaan ekspektasi yang besar di area ini rentan memicu kesalahpahaman yang berulang setelah menikah.";
+                    advice = "Jangan menghindari topik ini demi menjaga perasaan. Jadikan area ini prioritas utama untuk didiskusikan secara jujur, atau angkat topik ini saat sesi bimbingan bersama petugas KUA/konselor.";
+                }
+
+                return { gap, status, interp, advice, color: gap <= 0.6 ? 'text-emerald-600' : gap <= 1.4 ? 'text-blue-600' : 'text-amber-600' };
+            };
+            const getProfile = () => {
+                const finance = dimScores['Keuangan']; const emotion = dimScores['Emosi'];
+                const value = dimScores['Nilai']; const intimacy = dimScores['Kedekatan'];
+                
+                if (finance >= 3.8 && dimScores['MasaDepan'] >= 3.8) {
+                    return { title: 'Perencana yang Terstruktur', desc: 'Anda memiliki kecenderungan memikirkan kestabilan, manajemen finansial, dan antisipasi masa depan. Anda menyukai persiapan yang jelas dan menenangkan.', strengths: ['Pemikiran rasional jangka panjang.', 'Fokus pada keamanan keluarga.', 'Berkomitmen pada kesepakatan faktual.'], challenges: ['Berpotensi merasa cemas jika rencana keluar jalur.', 'Terkadang logika menutupi kebutuhan validasi emosional.'], growth: 'Sediakan ruang kompromi yang fleksibel. Pahami bahwa dukungan emosional terkadang lebih dibutuhkan daripada solusi analitis semata.' };
+                } else if (intimacy >= 3.8 && dimScores['Keluarga'] >= 3.8) {
+                    return { title: 'Pembangun Kehangatan', desc: 'Fokus Anda berpusat pada dukungan emosional, komunikasi afektif, dan keharmonisan. Anda melihat pernikahan sebagai ruang aman untuk bertumbuh bersama.', strengths: ['Memiliki empati yang tulus.', 'Memprioritaskan kedekatan dan koneksi batin.', 'Responsif terhadap kebutuhan emosional pasangan.'], challenges: ['Kecenderungan menghindari perdebatan sehat demi kedamaian.', 'Rentan mengalami kelelahan batin jika merasa berjuang sendiri.'], growth: 'Tumbuhkan keberanian untuk menyatakan ketidaksetujuan secara santun. Berbeda pendapat bukanlah tanda lunturnya keharmonisan.' };
+                } else if (value >= 3.8 && dimScores['Konflik'] >= 3.5) {
+                    return { title: 'Pencari Keselarasan', desc: 'Anda menjunjung tinggi komunikasi penyelesaian masalah dan prinsip moral. Bagi Anda, rumah tangga yang sehat adalah ruang dialog yang adil.', strengths: ['Kemampuan mencari jalan tengah.', 'Terbuka dalam membicarakan isu sensitif.', 'Sangat menghargai konsensus bersama.'], challenges: ['Cenderung menganalisis hubungan terlalu dalam.', 'Berpotensi merasa terbebani jika pasangan bersikap tertutup.'], growth: 'Belajarlah membedakan antara perbedaan selera harian dengan perbedaan prinsipil. Tidak semua hal harus diselaraskan secara sempurna.' };
+                } else {
+                    return { title: 'Individu Adaptif', desc: 'Anda menampilkan keterbukaan untuk menyesuaikan diri seiring berjalannya waktu. Anda tidak kaku, namun mungkin masih dalam tahap mematangkan ekspektasi pasti.', strengths: ['Fleksibilitas dalam menerima perubahan.', 'Tidak memaksakan kesempurnaan instan.', 'Siap belajar dari proses kehidupan.'], challenges: ['Beberapa batasan privasi dan rencana krusial belum terdefinisi.', 'Berisiko terbawa arus tanpa tujuan terarah.'], growth: 'Mulai formulasikan rencana yang lebih terukur. Ubah sikap adaptif menjadi kesepakatan konkret (misal: membahas domisili dan pengelolaan keuangan).' };
+                }
+            };
+            const profile = getProfile();
+
+            return (
+                <div className="fade-in space-y-12">
+                    <div className="hidden print:block text-center mb-8 border-b pb-4">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Kementerian_Agama_new_logo.png/640px-Kementerian_Agama_new_logo.png" alt="Logo Kemenag" className="w-12 h-12 mx-auto mb-2 grayscale"/>
+                        <h1 className="text-2xl font-bold">Laporan Pemetaan Perkawinan</h1>
+                        <p className="text-gray-500 text-sm">Dokumen Rahasia - KUA Kecamatan Pulau Laut Tengah</p>
+                    </div>
+
+                    {/* RED FLAGS WARNING */}
+                    {fatalWarnings.length > 0 && (
+                        <div className="bg-rose-50 border-2 border-rose-200 rounded-3xl p-6 shadow-sm">
+                            <h3 className="text-rose-800 font-extrabold text-lg flex items-center gap-2 mb-3"><span className="text-2xl">⚠️</span> Perhatian Khusus</h3>
+                            <p className="text-sm text-rose-700 font-medium mb-3 text-justify">Sistem kami mendeteksi beberapa area krusial yang menyangkut keamanan emosional dan integritas hubungan. Kami sangat merekomendasikan Anda untuk berkonsultasi lebih lanjut dengan petugas bimbingan KUA mengenai:</p>
+                            <ul className="list-disc pl-5 text-sm text-rose-800 space-y-1 font-semibold">
+                                {fatalWarnings.map((w,i) => <li key={i}>{w}</li>)}
+                            </ul>
+                        </div>
+                    )}
+
+                    {/* --- 1. PROFIL UTAMA --- */}
+                    <section className="bg-white/80 backdrop-blur-sm p-8 md:p-10 rounded-[2.5rem] shadow-lg border border-slate-200/60 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-100 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/3"></div>
+                        <div className="relative z-10">
+                            <div className="text-xs font-extrabold text-blue-600 tracking-widest uppercase mb-3">Gambaran Karakteristik Anda</div>
+                            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-5 tracking-tight">{profile.title}</h2>
+                            <p className="text-lg text-slate-700 mb-8 leading-relaxed text-justify">{profile.desc}</p>
+                            
+                            <div className="grid md:grid-cols-2 gap-6 bg-slate-50/80 p-6 rounded-3xl border border-slate-100">
+                                <div>
+                                    <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><span className="text-emerald-500 bg-emerald-100 p-1.5 rounded-lg">✓</span> Potensi Pendukung</h3>
+                                    <ul className="space-y-3">
+                                        {profile.strengths.map((s, i) => <li key={i} className="text-slate-600 text-sm flex text-justify gap-2"><span className="text-emerald-500 flex-shrink-0 mt-0.5">•</span> <span>{s}</span></li>)}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><span className="text-amber-500 bg-amber-100 p-1.5 rounded-lg">⚠</span> Area Kewaspadaan</h3>
+                                    <ul className="space-y-3">
+                                        {profile.challenges.map((c, i) => <li key={i} className="text-slate-600 text-sm flex text-justify gap-2"><span className="text-amber-500 flex-shrink-0 mt-0.5">•</span> <span>{c}</span></li>)}
+                                    </ul>
+                                </div>
+                            </div>
+                            <div className="mt-6 bg-blue-50 p-6 rounded-3xl border border-blue-100">
+                                <h3 className="font-bold text-blue-800 text-sm mb-2 uppercase tracking-wide">🌱 Saran Pengembangan Diri:</h3>
+                                <p className="text-sm text-blue-700 text-justify leading-relaxed">{profile.growth}</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* --- FITUR KODE PASANGAN --- */}
+                    <section className="bg-slate-900 p-6 md:p-8 rounded-3xl shadow-md text-white no-print">
+                        <h3 className="text-xl font-bold mb-2">Bandingkan dengan Pasangan</h3>
+                        <p className="text-sm text-slate-400 mb-6 leading-relaxed text-justify">Salin kode Anda dan berikan kepada pasangan, atau masukkan kode yang diberikan pasangan Anda di bawah ini untuk melihat keselarasan pemahaman Anda berdua pada peta di bawah.</p>
+                        
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700">
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Kode Anda:</p>
+                                <div className="flex gap-2">
+                                    <input type="text" readOnly value={myCode} className="w-full bg-slate-900 text-emerald-400 text-sm p-3 rounded-xl border border-slate-700 focus:outline-none" />
+                                </div>
+                            </div>
+                            <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700">
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Masukkan Kode Pasangan:</p>
+                                <div className="flex gap-2">
+                                    <input type="text" value={partnerCodeInput} onChange={e=>setPartnerCodeInput(e.target.value)} placeholder="Tempel kode di sini..." className="w-full bg-slate-100 text-slate-900 text-sm p-3 rounded-xl focus:outline-none" />
+                                    <button onClick={handleCheckPartner} className="bg-blue-600 text-white font-bold px-4 rounded-xl hover:bg-blue-500">Cek</button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* --- 2. PETA KESIAPAN INTERAKTIF --- */}
+                    <section className="print-break">
+                        <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-6">
+                            <div>
+                                <h2 className="text-2xl font-extrabold text-slate-900 mb-2 tracking-tight">Peta Keselarasan (14 Dimensi)</h2>
+                                <p className="text-sm text-slate-500 bg-slate-100 inline-block px-4 py-2 rounded-xl font-medium">✨ Ketuk/klik kartu untuk membaca penafsiran.</p>
+                            </div>
+                            {partnerData && (
+                                <div className="flex gap-3 mt-4 md:mt-0 bg-white p-3 rounded-xl border border-slate-200 shadow-sm text-xs font-bold">
+                                    <span className="flex items-center gap-1"><span className="w-3 h-3 bg-blue-500 rounded-full"></span> Anda</span>
+                                    <span className="flex items-center gap-1"><span className="w-3 h-3 bg-purple-500 rounded-full"></span> Pasangan</span>
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                            {Object.keys(dimensiNames).map(key => {
+                                const score = dimScores[key] || 0;
+                                const isExpanded = expandedDim === key;
+                                const info = getDimensiInfo(key, score);
+                                let colorClass = score >= 4 ? 'bg-emerald-500' : score >= 3 ? 'bg-blue-500' : 'bg-amber-500';
+
+                                return (
+                                    <div key={key} onClick={() => toggleDim(key)} className={`p-5 rounded-3xl border cursor-pointer transition-all duration-300 bg-white hover:border-slate-300 ${isExpanded ? 'shadow-md border-slate-300 ring-4 ring-slate-50' : 'shadow-sm border-slate-200'}`}>
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-3">
+                                                <div className="text-xl bg-slate-50 w-10 h-10 flex items-center justify-center rounded-xl border border-slate-100">{info.icon}</div>
+                                                <span className="font-bold text-slate-800 text-sm">{info.title}</span>
+                                            </div>
+                                            <span className={`text-sm text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                                        </div>
+                                        
+                                        {/* Bar Anda */}
+                                        <div className="w-full bg-slate-100 rounded-full h-1.5 mt-4 overflow-hidden relative">
+                                            <div className={`h-full ${colorClass} absolute transition-all duration-700`} style={{ width: `${(score/5)*100}%` }}></div>
+                                        </div>
+                                        
+                                        {/* Bar Pasangan */}
+                                        {partnerData && (
+                                            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1 overflow-hidden relative">
+                                                <div className={`h-full bg-purple-500 absolute transition-all duration-700`} style={{ width: `${(partnerData[key]/5)*100}%` }}></div>
+                                            </div>
+                                        )}
+
+                                        {/* Expandable Content */}
+                                        <div className={`expand-content ${isExpanded ? 'expanded mt-4' : 'collapsed'}`}>
+                                            <div className={`p-5 rounded-2xl text-sm border bg-slate-50 border-slate-100`}>
+                                                
+                                                {/* 1. Jika TIDAK ada data pasangan (Analisis Individu) */}
+                                                {!partnerData && (
+                                                    <>
+                                                        <p className="text-slate-700 leading-relaxed mb-4 text-justify"><span className="font-bold text-slate-800">Penafsiran Anda: </span>{info.interp}</p>
+                                                        <div className="h-px w-full bg-black/5 mb-3"></div>
+                                                        <p className="text-slate-700 leading-relaxed text-justify"><span className="font-bold text-slate-800">Saran Edukatif: </span>{info.rec}</p>
+                                                    </>
+                                                )}
+
+                                                {/* 2. Jika ADA data pasangan (Analisis Konseling Berpasangan) */}
+                                                {partnerData && (() => {
+                                                    const gapAnalisis = getGapAnalysis(key, score, partnerData[key]);
+                                                    return (
+                                                        <div className="space-y-4">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="bg-slate-200 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-full">Status Keselarasan</span>
+                                                                <span className={`text-sm font-extrabold ${gapAnalisis.color}`}>• {gapAnalisis.status}</span>
+                                                            </div>
+                                                            <p className="text-slate-700 leading-relaxed text-justify"><span className="font-bold text-slate-800 block mb-1">Dinamika Hubungan: </span>{gapAnalisis.interp}</p>
+                                                            <div className="h-px w-full bg-black/5"></div>
+                                                            <p className="text-slate-700 leading-relaxed text-justify"><span className="font-bold text-slate-800 block mb-1">Pendekatan Konseling: </span>{gapAnalisis.advice}</p>
+                                                        </div>
+                                                    );
+                                                })()}
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </section>
+
+                    {/* --- 4. SKENARIO PROYEKSI (TABS) --- */}
+                    <section className="bg-white/80 backdrop-blur-md border border-slate-200 p-6 md:p-10 rounded-[2.5rem] shadow-sm print-break">
+                        <h2 className="text-2xl font-extrabold text-slate-900 mb-6 tracking-tight">Proyeksi Kehidupan Kelak</h2>
+                        
+                        <div className="flex flex-col sm:flex-row bg-slate-100 p-1.5 rounded-2xl mb-6 gap-1">
+                            <button onClick={() => setActiveScenarioTab('kekuatan')} className={`flex-1 text-sm font-bold py-3 px-4 rounded-xl transition-all ${activeScenarioTab==='kekuatan' ? 'bg-white shadow-sm text-emerald-700 scale-[1.02]' : 'text-slate-500 hover:text-slate-700'}`}>Daya Tahan Positif</button>
+                            <button onClick={() => setActiveScenarioTab('realitas')} className={`flex-1 text-sm font-bold py-3 px-4 rounded-xl transition-all ${activeScenarioTab==='realitas' ? 'bg-white shadow-sm text-blue-700 scale-[1.02]' : 'text-slate-500 hover:text-slate-700'}`}>Tantangan Penyesuaian</button>
+                            <button onClick={() => setActiveScenarioTab('risiko')} className={`flex-1 text-sm font-bold py-3 px-4 rounded-xl transition-all ${activeScenarioTab==='risiko' ? 'bg-white shadow-sm text-amber-700 scale-[1.02]' : 'text-slate-500 hover:text-slate-700'}`}>Area Kewaspadaan</button>
+                        </div>
+
+                        <div className="min-h-[140px] bg-slate-50 p-6 md:p-8 rounded-3xl border border-slate-100">
+                            {activeScenarioTab === 'kekuatan' && (
+                                <div className="fade-in text-slate-700 leading-relaxed text-justify">
+                                    <strong className="text-emerald-700 block mb-3 text-lg">Modal Kuat yang Kalian Miliki</strong>
+                                    {dynamicScenarios.kekuatan}
+                                </div>
+                            )}
+                            {activeScenarioTab === 'realitas' && (
+                                <div className="fade-in text-slate-700 leading-relaxed text-justify">
+                                    <strong className="text-blue-700 block mb-3 text-lg">Ujian di Balik Rutinitas</strong>
+                                    {dynamicScenarios.realitas}
+                                </div>
+                            )}
+                            {activeScenarioTab === 'risiko' && (
+                                <div className="fade-in text-slate-700 leading-relaxed text-justify">
+                                    <strong className="text-amber-700 block mb-3 text-lg">Hati-hati Memendam Perasaan</strong>
+                                    {dynamicScenarios.risiko}
+                                </div>
+                            )}
+                        </div>
+                    </section>
+                    {/* --- 5. SIMULASI PERJALANAN RUMAH TANGGA --- */}
+                    <section className="bg-slate-900 text-white p-6 md:p-10 rounded-[2.5rem] shadow-xl print-break relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500 rounded-full blur-[100px] opacity-20"></div>
+                        <div className="relative z-10">
+                            <h2 className="text-2xl font-extrabold mb-2 tracking-tight">Simulasi Perjalanan Pernikahan {userName}</h2>
+                            <p className="text-sm text-slate-400 mb-8 leading-relaxed">Gambaran siklus psikologis pernikahan ini dihitung berdasarkan usia Anda ({userAge} tahun) saat ini. Ketuk tahun untuk melihat prediksi tantangan dan panduannya.</p>
+
+                            {/* Timeline Buttons */}
+                            <div className="flex gap-2 overflow-x-auto pb-4 snap-x hide-scrollbar">
+                                {milestones.map((m, idx) => (
+                                    <button 
+                                        key={idx} 
+                                        onClick={() => setActiveMilestone(idx)}
+                                        className={`flex-shrink-0 snap-start flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all min-w-[110px] ${activeMilestone === idx ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'}`}
+                                    >
+                                        <span className="text-2xl mb-2">{m.icon}</span>
+                                        <span className="text-xs font-bold uppercase tracking-wider">Tahun ke-{m.year}</span>
+                                        <span className="text-[10px] bg-slate-900/50 px-2 py-1 rounded-full mt-1">Usia {m.age}</span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Timeline Content */}
+                            <div className="bg-slate-800/80 backdrop-blur-sm border border-slate-700 p-6 md:p-8 rounded-3xl mt-2 min-h-[160px] animate-fadeIn">
+                                <h3 className="text-xl font-bold text-emerald-400 mb-1 flex items-center gap-2">
+                                    {milestones[activeMilestone].title}
+                                </h3>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Prediksi Usia {milestones[activeMilestone].age} Tahun</p>
+                                <p className="text-slate-300 leading-relaxed text-justify text-sm md:text-base">
+                                    {milestones[activeMilestone].desc}
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Footer Actions */}
+                    <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4 no-print">
+                        <button onClick={() => window.print()} className="px-8 py-4 bg-slate-900 text-white font-extrabold rounded-2xl hover:bg-slate-800 shadow-xl hover:shadow-slate-900/30 hover:-translate-y-1 transition-all flex justify-center items-center gap-3">
+                            <span className="text-xl">🖨️</span> Cetak / Simpan PDF
+                        </button>
+                        <button onClick={onRestart} className="px-8 py-4 bg-white text-slate-700 font-extrabold rounded-2xl border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all shadow-sm flex justify-center items-center gap-3">
+                            <span className="text-xl">🔄</span> Akhiri Sesi & Hapus Data
+                        </button>
+                    </div>
+
+                    <div className="text-center pb-12 no-print mt-10 border-t border-slate-200 pt-8">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Kementerian_Agama_new_logo.png/640px-Kementerian_Agama_new_logo.png" alt="Logo Kemenag" className="w-10 h-10 mx-auto mb-3 opacity-60 grayscale"/>
+                        <p className="text-xs font-bold tracking-widest text-slate-400 uppercase">Fasilitas Bimbingan Perkawinan</p>
+                        <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase">KUA Kecamatan Pulau Laut Tengah</p>
+                        <p className="text-[10px] text-slate-400 mt-2 max-w-sm mx-auto">Dokumen ini bersifat rahasia dan sepenuhnya ditujukan untuk keperluan refleksi internal calon pengantin.</p>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
