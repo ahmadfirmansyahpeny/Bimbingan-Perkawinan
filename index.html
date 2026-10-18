@@ -518,12 +518,24 @@
                 const sortedDims = Object.entries(dimScores).sort((a,b) => b[1] - a[1]);
                 const topDim = dimensiNames[sortedDims[0][0]];
                 const lowestDim = dimensiNames[sortedDims[sortedDims.length - 1][0]];
-
+                // Menentukan narasi profil ringkas untuk fasilitator
+                let profileSummary = "";
+                if (dimScores['Keuangan'] >= 3.8 && dimScores['MasaDepan'] >= 3.8) {
+                    profileSummary = `${userName} (Usia ${userAge}) menunjukkan profil sebagai individu yang rasional, terstruktur, dan sangat memikirkan kestabilan masa depan serta tanggung jawab material. Ia cenderung menyukai kejelasan dan perencanaan yang matang dalam membangun rumah tangga.`;
+                } else if (dimScores['Kedekatan'] >= 3.8 && dimScores['Keluarga'] >= 3.8) {
+                    profileSummary = `${userName} (Usia ${userAge}) menampilkan profil sebagai pribadi yang hangat, menempatkan kedekatan emosional, empati, dan keharmonisan hubungan sebagai prioritas utama dalam memandang sebuah ikatan perkawinan.`;
+                } else if (dimScores['Nilai'] >= 3.8 && dimScores['Konflik'] >= 3.5) {
+                    profileSummary = `${userName} (Usia ${userAge}) memiliki karakter yang komunikatif, menjunjung tinggi konsensus bersama, serta berorientasi pada penyelesaian masalah secara adil dan terbuka saat menghadapi perbedaan pandangan.`;
+                } else {
+                    profileSummary = `${userName} (Usia ${userAge}) menunjukkan karakter yang adaptif dan terbuka untuk terus belajar. Ia siap menjalani proses penyesuaian tahap demi tahap dalam menyelaraskan kehidupan berumah tangga.`;
+                }
                 let text = `*HASIL REFLEKSI BIMBINGAN PERKAWINAN KUA*\n\n`;
                 text += `*Data Calon Pengantin:*\n`;
                 text += `• Nama: ${userName}\n`;
                 text += `• Usia: ${userAge} Tahun\n\n`;
                 text += `*Ringkasan Pemetaan:*\n`;
+                text += `*Gambaran Karakter (Ringkasan Fasilitator):*\n`;
+                text += `${profileSummary}\n\n`;
                 text += `• Profil Karakter: ${profile.title}\n`;
                 text += `• Kekuatan Utama: ${topDim}\n`;
                 text += `• Area Evaluasi: ${lowestDim}\n\n`;
