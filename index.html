@@ -512,7 +512,44 @@
                 { year: ageM4 - userAge, age: ageM4, title: 'Masa Transisi', icon: '☕', desc: getMilestone4() },
                 { year: ageM5 - userAge, age: ageM5, title: 'Menua Bersama', icon: '🌅', desc: getMilestone5() }
             ];
+            // --- FUNGSI PENGIRIMAN HASIL KE KUA ---
+            const generateReportText = () => {
+                // Mencari dimensi terkuat dan terlemah
+                const sortedDims = Object.entries(dimScores).sort((a,b) => b[1] - a[1]);
+                const topDim = dimensiNames[sortedDims[0][0]];
+                const lowestDim = dimensiNames[sortedDims[sortedDims.length - 1][0]];
 
+                let text = `*HASIL REFLEKSI BIMBINGAN PERKAWINAN KUA*\n\n`;
+                text += `*Data Calon Pengantin:*\n`;
+                text += `• Nama: ${userName}\n`;
+                text += `• Usia: ${userAge} Tahun\n\n`;
+                text += `*Ringkasan Pemetaan:*\n`;
+                text += `• Profil Karakter: ${profile.title}\n`;
+                text += `• Kekuatan Utama: ${topDim}\n`;
+                text += `• Area Evaluasi: ${lowestDim}\n\n`;
+                
+                if (fatalWarnings.length > 0) {
+                    text += `*⚠️ Peringatan (Red Flags):*\n`;
+                    text += `Sistem mendeteksi ${fatalWarnings.length} area krusial yang memerlukan pendampingan konselor.\n\n`;
+                }
+
+                text += `*Kode Pasangan:*\n${myCode}\n\n`;
+                text += `_Laporan ini dihasilkan otomatis dari Aplikasi Refleksi Mandiri._`;
+                
+                return encodeURIComponent(text);
+            };
+
+            const handleSendWA = () => {
+                const text = generateReportText();
+                // Mengirim langsung ke nomor WA 085161834463
+                window.open(`https://wa.me/6285161834463?text=${text}`, '_blank');
+            };
+
+            const handleSendEmail = () => {
+                const text = generateReportText().replace(/%0A/g, '%0D%0A');
+                // Mengirim langsung ke email ahmadfirmansyah.peny@gmail.com
+                window.location.href = `mailto:ahmadfirmansyah.peny@gmail.com?subject=Hasil Bimbingan Perkawinan - ${userName}&body=${text}`;
+            };
             // 3. FUNGSI SKENARIO DINAMIS BERDASARKAN HASIL SURVEI
             const getDynamicScenarios = () => {
                 const sortedDims = Object.entries(dimScores).sort((a,b) => b[1] - a[1]);
@@ -875,13 +912,27 @@
                     </section>
 
                     {/* Footer Actions */}
-                    <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4 no-print">
-                        <button onClick={() => window.print()} className="px-8 py-4 bg-slate-900 text-white font-extrabold rounded-2xl hover:bg-slate-800 shadow-xl hover:shadow-slate-900/30 hover:-translate-y-1 transition-all flex justify-center items-center gap-3">
-                            <span className="text-xl">🖨️</span> Cetak / Simpan PDF
-                        </button>
-                        <button onClick={onRestart} className="px-8 py-4 bg-white text-slate-700 font-extrabold rounded-2xl border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all shadow-sm flex justify-center items-center gap-3">
-                            <span className="text-xl">🔄</span> Akhiri Sesi & Hapus Data
-                        </button>
+                    <div className="pt-6 no-print space-y-4">
+                        <div className="bg-slate-50 border border-slate-200 p-6 rounded-3xl text-center max-w-2xl mx-auto">
+                            <p className="text-sm font-bold text-slate-800 mb-4">Kirim Hasil Refleksi ke Fasilitator KUA</p>
+                            <div className="flex flex-col sm:flex-row justify-center gap-3">
+                                <button onClick={handleSendWA} className="px-6 py-3 bg-[#25D366] text-white font-bold rounded-2xl hover:bg-[#128C7E] shadow-md hover:shadow-lg transition-all flex justify-center items-center gap-2">
+                                    <span className="text-xl">💬</span> Kirim via WhatsApp
+                                </button>
+                                <button onClick={handleSendEmail} className="px-6 py-3 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 shadow-md hover:shadow-lg transition-all flex justify-center items-center gap-2">
+                                    <span className="text-xl">✉️</span> Kirim via Email
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row justify-center gap-3 mt-4">
+                            <button onClick={() => window.print()} className="px-6 py-3.5 bg-slate-900 text-white font-extrabold rounded-2xl hover:bg-slate-800 shadow-md hover:-translate-y-0.5 transition-all flex justify-center items-center gap-2">
+                                <span className="text-xl">🖨️</span> Cetak / Simpan PDF
+                            </button>
+                            <button onClick={onRestart} className="px-6 py-3.5 bg-white text-rose-600 font-extrabold rounded-2xl border-2 border-rose-100 hover:bg-rose-50 hover:border-rose-200 transition-all shadow-sm flex justify-center items-center gap-2">
+                                <span className="text-xl">🗑️</span> Hapus Data & Keluar
+                            </button>
+                        </div>
                     </div>
 
                     <div className="text-center pb-12 no-print mt-10 border-t border-slate-200 pt-8">
